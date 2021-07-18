@@ -1,0 +1,8 @@
+train: ../haoun/images/train/  
+val: ../haoun/images/val/  
+test: ../haoun/images/test/ 
+# number of classes
+nc: 5
+
+# class names
+names: ['hands','head','sanitizer','temperature','qr']
