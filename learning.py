@@ -86,19 +86,23 @@ class CNN(nn.Module):
         out = self.fc(out)
         return out
 
-def deepcall(image):
-    image = cv2.resize(image, dsize=(200, 200), interpolation=cv2.INTER_AREA)
-    cv2.imwrite( './hi.jpg', image)
-    image = torch.FloatTensor(image).to(device)
-    image = image.transpose(1, 2)
-    image = image.transpose(0, 1)
-    image = torch.unsqueeze(image, 0)
+def deepcall():
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Resize((200, 200))
+        ]
+    )
+    test_datasets = datasets.ImageFolder('./tmp/img', transform=transform)
+    test_loader = DataLoader(test_datasets, batch_size=1, shuffle=False)
     model = CNN().to(device)
     model.load_state_dict(torch.load('./test_model.pth'))
-
     model.eval().to(device)  # model = 훈련이 완료 된 모델
     with torch.no_grad():
-      y_pred = model(image)
-    print("y_pred의 값:"+str(y_pred))
-
+        for i, data in enumerate(test_loader):
+          inputs, labels = data
+          inputs = inputs.to(device)
+          y_pred = model(inputs)
+          x = torch.argmax(y_pred) #0 = 손소독완료 1 = 체온완료 2 = qr완료 3 = 미이행
+          return x
 

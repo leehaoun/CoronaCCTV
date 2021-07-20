@@ -3,3 +3,21 @@ python train.py  --batch-size 8 --data data/haoun.yaml --cfg models/yolov5s-cust
 #test 코드
 python detect2.py --source data/videos/4.mp4 --weights weights/custom.pt --conf 0.55 --device 0
 python detect2.py --source data/images/1.jpg --weights weights/custom.pt --conf 0.55 --device 0
+
+
+1(101)
+2(000)
+3(011)
+4(111)
+5(101)
+6(110)
+7(111)
+8(110)
+9(111)
+10(111)
+
+
+cls : 0,1,2,3,4
+00 -> 11 -> 10
+
+
