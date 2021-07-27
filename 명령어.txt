@@ -1,8 +1,8 @@
 #train 코드
 python train.py  --batch-size 8 --data data/haoun.yaml --cfg models/yolov5s-custom.yaml --device 0
 #test 코드
-python detect2.py --source data/videos/4.mp4 --weights weights/custom.pt --conf 0.55 --device 0
-python detect2.py --source data/images/1.jpg --weights weights/custom.pt --conf 0.55 --device 0
+python detect.py --source data/videos/4.mp4 --weights weights/custom.pt --conf 0.55 --device 0
+python detect.py  --source 0 --weights weights/custom.pt --conf 0.55 --device 0
 
 
 1(101)
@@ -17,7 +17,11 @@ python detect2.py --source data/images/1.jpg --weights weights/custom.pt --conf 
 10(111)
 
 
-cls : 0,1,2,3,4
-00 -> 11 -> 10
+
+
+
+
+
+ 
 
 

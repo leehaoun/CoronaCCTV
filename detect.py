@@ -5,7 +5,7 @@ import cv2
 import torch
 import torch.backends.cudnn as cudnn
 import os
-
+import winsound
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
@@ -13,6 +13,10 @@ from utils.general import check_img_size, check_requirements, check_imshow, non_
 from utils.plots import colors, plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 from learning import deepcall
+from threading import Thread
+
+def sound():
+    winsound.PlaySound('siren.wav', winsound.SND_FILENAME | winsound.SND_PURGE)
 
 def check(xyxy, xyxytemp):
     if xyxy[0] > xyxytemp[2]:
@@ -31,10 +35,11 @@ tmo_person = [200, 200, 200, 200]
 tmp_sani = [200, 300, 200, 300]
 tmp_temp = [200, 400, 200, 400]
 tmp_qrcd = [200, 500, 200, 500]
-pcount = [200, 600, 200, 600]
+pcount = [200, 600, 200, 600]#여기까지는 label들의 위치
+siren = [200, 700, 200, 700]
 MAX_PERSON = 1000
-count = [0, 0]
-deepcall_check=[0, 0, 0]
+count = [0, 0] #첫번째 숫자는 현재 화면에 사람이 있는지,없는지 체크 두번째 숫자는 10번연속 검출되어야 사람이 있다고 판정하기 위해서 사용
+deepcall_check=[0, 0, 0] #count와 마찬가지로, 객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
 
 @torch.no_grad()
 def detect(weights='yolov5s.pt',  # model.pt path(s)
@@ -112,6 +117,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
     check_sani = [False for i in range(MAX_PERSON)]
     check_temp = [False for i in range(MAX_PERSON)]
     check_qrcd = [False for i in range(MAX_PERSON)]
+    check_siren = [False for i in range(MAX_PERSON)]
     person_count = 0
     # Run inference
     if device.type != 'cpu':
@@ -160,7 +166,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                 # Write results
                 check_person = False
                 temp = [deepcall_check[0], deepcall_check[1], deepcall_check[2]]
-                print(deepcall_check)
                 for *xyxy, conf, cls in reversed(det): #1frame
                     if cls.item() == 0.0 or cls.item() == 1.0:
                         for *xyxytmp, conftmp, clstmp in reversed(det):
@@ -233,8 +238,18 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                  line_thickness=line_thickness)
                 else:
                     count[1] = count[1] + 1
-                    if count[1] == 10:
+                    if count[0] == 1 and count[1] == 10:
                         count[0] = 0
+                        if check_qrcd[person_count] == False or check_sani[person_count] == False or check_temp[person_count] == False:
+                            check_siren[person_count] == True
+                            print()
+                            print("미이행자를 발견했습니다. 경보를 전파합니다")
+                            print()
+                            plot_one_box(siren, im0, label="미이행자발견!!", color=colors(int(200), True),
+                                         line_thickness=line_thickness)
+                            th1 = Thread(target=sound)
+                            th1.start()
+
                     plot_one_box(tmo_person, im0, label="person = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 if check_sani[person_count]:
@@ -329,3 +344,4 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     check_requirements(exclude=('tensorboard', 'thop'))
     detect(**vars(opt))
+
