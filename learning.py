@@ -10,7 +10,6 @@ import time
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 torch.manual_seed(0)  # 랜덤 시드를 준다
 device = 'cuda'
-
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
@@ -96,7 +95,7 @@ def deepcall():
     test_datasets = datasets.ImageFolder('./tmp/img', transform=transform)
     test_loader = DataLoader(test_datasets, batch_size=1, shuffle=False)
     model = CNN().to(device)
-    model.load_state_dict(torch.load('./test_model.pth'))
+    model.load_state_dict(torch.load('./8192_weights.pth'))
     model.eval().to(device)  # model = 훈련이 완료 된 모델
     with torch.no_grad():
         for i, data in enumerate(test_loader):

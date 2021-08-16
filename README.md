@@ -95,7 +95,7 @@ YOLOv5 may be run in any of the following up-to-date verified environments (with
 
 `detect.py` runs inference on a variety of sources, downloading models automatically from the [latest YOLOv5 release](https://github.com/ultralytics/yolov5/releases) and saving results to `runs/detect`.
 ```bash
-$ python detect.py --source 0  # webcam
+$ python hanium_detect.py --source 0  # webcam
                             file.jpg  # image 
                             file.mp4  # video
                             path/  # directory
@@ -106,7 +106,7 @@ $ python detect.py --source 0  # webcam
 
 To run inference on example images in `data/images`:
 ```bash
-$ python detect.py --source data/images --weights yolov5s.pt --conf 0.25
+$ python hanium_detect.py --source data/images --weights yolov5s.pt --conf 0.25
 
 Namespace(agnostic_nms=False, augment=False, classes=None, conf_thres=0.25, device='', exist_ok=False, img_size=640, iou_thres=0.45, name='exp', project='runs/detect', save_conf=False, save_txt=False, source='data/images/', update=False, view_img=False, weights=['yolov5s.pt'])
 YOLOv5 v4.0-96-g83dc1b4 torch 1.7.0+cu101 CUDA:0 (Tesla V100-SXM2-16GB, 16160.5MB)

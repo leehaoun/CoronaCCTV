@@ -5,7 +5,7 @@ import cv2
 import torch
 import torch.backends.cudnn as cudnn
 import os
-
+import winsound
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
@@ -13,20 +13,22 @@ from utils.general import check_img_size, check_requirements, check_imshow, non_
 from utils.plots import colors, plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 from learning import deepcall
+from threading import Thread
 
+def sound():
+    winsound.PlaySound('siren.wav', winsound.SND_FILENAME | winsound.SND_PURGE)
 
 def check(xyxy, xyxytemp):
-    if xyxy[0] > xyxytemp[2]:
+    if xyxy[0]-10> xyxytemp[2]:
         return False
-    elif xyxy[2] < xyxytemp[0]:
+    elif xyxy[2]+10 < xyxytemp[0]:
         return False
-    elif xyxy[3] < xyxytemp[1]:
+    elif xyxy[3]+10< xyxytemp[1]:
         return False
-    elif xyxy[1] > xyxytemp[3]:
+    elif xyxy[1]-10 > xyxytemp[3]:
         return False
     else:
         return True
-
 
 tmp = [100, 100, 100, 100]
 tmo_person = [200, 200, 200, 200]
@@ -34,11 +36,10 @@ tmp_sani = [200, 300, 200, 300]
 tmp_temp = [200, 400, 200, 400]
 tmp_qrcd = [200, 500, 200, 500]
 pcount = [200, 600, 200, 600]
-MAX_PERSON = 1000
-count = [0, 0]
-deepcall_check = [0, 0, 0]
-
-
+siren = [200, 700, 200, 700]
+MAX_PERSON = 100
+count = [0, 0] #첫번째 숫자는 현재 화면에 사람이 있는지,없는지 체크 두번째 숫자는 10번연속 검출되어야 사람이 있다고 판정하기 위해서 사용
+deepcall_check=[0, 0, 0] #count와 마찬가지로, 객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
 @torch.no_grad()
 def detect(weights='yolov5s.pt',  # model.pt path(s)
            source='data/images',  # file/dir/URL/glob, 0 for webcam
@@ -115,6 +116,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
     check_sani = [False for i in range(MAX_PERSON)]
     check_temp = [False for i in range(MAX_PERSON)]
     check_qrcd = [False for i in range(MAX_PERSON)]
+    check_siren = [False for i in range(MAX_PERSON)]
     person_count = 0
     # Run inference
     if device.type != 'cpu':
@@ -148,7 +150,9 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
 
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # img.jpg
+            txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
             s += '%gx%g ' % img.shape[2:]  # print string
+            gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             imc = im0.copy() if save_crop else im0  # for save_crop
             if len(det):
                 # Rescale boxes from img_size to im0 size
@@ -161,47 +165,74 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                 # Write results
                 check_person = False
                 temp = [deepcall_check[0], deepcall_check[1], deepcall_check[2]]
-                print(deepcall_check)
-                for *xy_xy, conf, cls in det:  # 1frame
+                for *xyxy, conf, cls in reversed(det): #1frame
                     if cls.item() == 0.0 or cls.item() == 1.0:
-                        for *xy_xy_tmp, cls_tmp in reversed(det):
-                            if cls_tmp.item() != 0.0 and cls_tmp.item() != 1.0 and check(xy_xy, xy_xy_tmp):  # cls(손, 얼굴) clstmp(손소독,qr,온도계)
-                                if cls.item() == 0.0 and cls_tmp.item() == 2.0:
-                                    x1 = xy_xy_tmp[0], x2 = xy_xy_tmp[2], y1 = xy_xy_tmp[1], y2 = xy_xy_tmp[3]
-                                    ry = (y2 - y1) / 2
-                                    img_trim = im0s[int(y1 - ry):int(y2), int(x1):int(x2)]
+                        for *xyxytmp, clstmp in reversed(det):
+                            if clstmp.item() != 0.0 and clstmp.item() != 1.0 and check(xyxy, xyxytmp): #cls(손, 얼굴) clstmp(손소독,qr,온도계)
+                                if cls.item() == 0.0 and clstmp.item() == 2.0:
+                                    x1 = xyxytmp[0]
+                                    x2 = xyxytmp[2]
+                                    y1 = xyxytmp[1]
+                                    y2 = xyxytmp[3]
+                                    ry = (y2 - y1)/8
+                                    img_trim = im0s[int(y1-ry):int(y2), int(x1):int(x2)]
                                     cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                    if deepcall() == 0:
-                                        deepcall_check[0] = deepcall_check[0] + 1
-                                        if deepcall_check[0] == 10:
-                                            check_sani[person_count] = True
-                                elif cls.item() == 1.0 and cls_tmp.item() == 3.0:
-                                    x1 = xy_xy_tmp[0], x2 = xy_xy_tmp[2], y1 = xy_xy_tmp[1], y2 = xy_xy_tmp[3]
+                                    if len(os.listdir("./tmp/img/1")) != 0:
+                                        if deepcall() == 0:
+                                            plot_one_box(tmp, im0, label="check = sanitizer", color=colors(int(cls), True),
+                                                         line_thickness=line_thickness)
+                                            deepcall_check[0] = deepcall_check[0] + 1
+                                            if deepcall_check[0] == 10:
+                                                check_sani[person_count] = True
+                                elif cls.item() == 1.0 and clstmp.item() == 3.0:
+                                    x1 = xyxytmp[0]
+                                    x2 = xyxytmp[2]
+                                    y1 = xyxytmp[1]
+                                    y2 = xyxytmp[3]
                                     rx = (x2 - x1) / 2
-                                    img_trim = im0s[int(y1):int(y2), int(x1):int(x2 + rx)]
+                                    img_trim = im0s[int(y1):int(y2), int(x1-rx):int(x2+rx)]
                                     cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                    if deepcall() == 1:
-                                        deepcall_check[1] = deepcall_check[1] + 1
-                                        if deepcall_check[1] == 10:
-                                            check_temp[person_count] = True
-                                elif cls.item() == 0.0 and cls_tmp.item() == 4.0:
-                                    x1 = xy_xy_tmp[0], x2 = xy_xy_tmp[2], y1 = xy_xy_tmp[1], y2 = xy_xy_tmp[3]
-                                    img_trim = im0s[int(y1):int(y2), int(x1):int(x2)]
+                                    if len(os.listdir("./tmp/img/1")) != 0:
+                                        if deepcall() == 1:
+                                            plot_one_box(tmp, im0, label="check = temperatrue",
+                                                         color=colors(int(cls), True),
+                                                         line_thickness=line_thickness)
+                                            deepcall_check[1] = deepcall_check[1] + 1
+                                            if deepcall_check[1] == 10:
+                                                check_temp[person_count] = True
+                                elif cls.item() == 0.0 and clstmp.item() == 4.0:
+                                    x1 = xyxytmp[0]
+                                    x2 = xyxytmp[2]
+                                    y1 = xyxytmp[1]
+                                    y2 = xyxytmp[3]
+                                    rx = (x2 - x1) / 4
+                                    img_trim = im0s[int(y1):int(y2), int(x1-rx):int(x2+rx)]
                                     cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                    if deepcall() == 2:
-                                        deepcall_check[2] = deepcall_check[2] + 1
-                                        if deepcall_check[2] == 10:
-                                            check_qrcd[person_count] = True
+                                    if len(os.listdir("./tmp/img/1")) != 0:
+                                        if deepcall() == 2:
+                                            plot_one_box(tmp, im0, label="check = qrcode", color=colors(int(cls), True),
+                                                         line_thickness=line_thickness)
+                                            deepcall_check[2] = deepcall_check[2] + 1
+                                            if deepcall_check[2] == 10:
+                                                check_qrcd[person_count] = True
+
                         check_person = True
+
+
+                    if save_txt: # Write to file
+                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                        line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
+                        with open(txt_path + '.txt', 'a') as f:
+                            f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
                     if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
-                        plot_one_box(xy_xy, im0, label=label, color=colors(c, True), line_thickness=line_thickness)
+                        plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=line_thickness)
                         if save_crop:
-                            save_one_box(xy_xy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                            save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
-                # 여기부터 박스
+                #여기부터 박스
                 if check_person:
                     count[1] = 0
                     if count[0] == 0:
@@ -211,27 +242,37 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                  line_thickness=line_thickness)
                 else:
                     count[1] = count[1] + 1
-                    if count[1] == 10:
+                    if count[0] == 1 and count[1] == 10:
                         count[0] = 0
-                    plot_one_box(tmo_person, im0, label="person = X", color=colors(int(100), True),
+                        if check_qrcd[person_count] == False or check_sani[person_count] == False or check_temp[person_count] == False:
+                            check_siren[person_count] == True
+                            print()
+                            print("미이행자를 발견했습니다. 경보를 전파합니다")
+                            print()
+                            plot_one_box(siren, im0, label="WARNING", color=colors(int(200), True),
+                                         line_thickness=line_thickness)
+                            th1 = Thread(target=sound)
+                            th1.start()
+
+                    plot_one_box(tmo_person, im0, label="person = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 if check_sani[person_count]:
                     plot_one_box(tmp_sani, im0, label="sani = O", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 else:
-                    plot_one_box(tmp_sani, im0, label="sani = X", color=colors(int(100), True),
+                    plot_one_box(tmp_sani, im0, label="sani = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 if check_temp[person_count]:
                     plot_one_box(tmp_temp, im0, label="temp = O", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 else:
-                    plot_one_box(tmp_temp, im0, label="temp = X", color=colors(int(100), True),
+                    plot_one_box(tmp_temp, im0, label="temp = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 if check_qrcd[person_count]:
                     plot_one_box(tmp_qrcd, im0, label="qrcd = O", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 else:
-                    plot_one_box(tmp_qrcd, im0, label="qrcd = X", color=colors(int(100), True),
+                    plot_one_box(tmp_qrcd, im0, label="qrcd = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 plot_one_box(pcount, im0, label=f"count = {person_count}", color=colors(int(200), True),
                              line_thickness=line_thickness)
@@ -240,6 +281,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                     deepcall_check[0] = 0
                     deepcall_check[1] = 0
                     deepcall_check[2] = 0
+
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
@@ -306,3 +348,4 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     check_requirements(exclude=('tensorboard', 'thop'))
     detect(**vars(opt))
+
