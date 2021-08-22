@@ -30,6 +30,7 @@ def check(xyxy, xyxytemp):
     else:
         return True
 
+exit = [500, 500, 500, 500]
 tmp = [100, 100, 100, 100]
 tmo_person = [200, 200, 200, 200]
 tmp_sani = [200, 300, 200, 300]
@@ -147,7 +148,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                 p, s, im0, frame = path[i], f'{i}: ', im0s[i].copy(), dataset.count
             else:
                 p, s, im0, frame = path, '', im0s.copy(), getattr(dataset, 'frame', 0)
-
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # img.jpg
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
@@ -285,6 +285,8 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
+            plot_one_box(exit, im0, label="EXIT : Q", color=colors(int(200), True),
+                         line_thickness=line_thickness)
 
             # Stream results
             if view_img:
