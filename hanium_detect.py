@@ -1,3 +1,5 @@
+# 9월 6일 그 전에 구현된 경보, 메시지 기능 UI 연동 구현 위해서 다시 추가, UI 관련으로 detect 파라미터 추가
+
 import argparse
 import time
 from pathlib import Path
@@ -14,9 +16,12 @@ from utils.plots import colors, plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 from learning import deepcall
 from threading import Thread
+from tkinter import messagebox as msg
+
 
 def sound():
     winsound.PlaySound('siren.wav', winsound.SND_FILENAME | winsound.SND_PURGE)
+
 
 def check(xyxy, xyxytemp):
     if xyxy[0]-10> xyxytemp[2]:
@@ -29,6 +34,7 @@ def check(xyxy, xyxytemp):
         return False
     else:
         return True
+
 
 def check_final(xyxy, comp):
     if comp+10 > xyxy[0] > comp-10:
@@ -55,7 +61,9 @@ qrcd_x = 0
 
 @torch.no_grad()
 def detect(weights='yolov5s.pt',  # model.pt path(s)
-           source='data/images',  # file/dir/URL/glob, 0 for webcam
+           source='data/images', # file/dir/URL/glob, 0 for webcam
+           w_width=1280,
+           w_height=720,
            imgsz=640,  # inference size (pixels)
            conf_thres=0.25,  # confidence threshold
            iou_thres=0.45,  # NMS IOU threshold
@@ -77,6 +85,8 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
            hide_labels=False,  # hide labels
            hide_conf=False,  # hide confidences
            half=False,  # use FP16 half-precision inference
+           alarm=True,
+           message=True,
            ):
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
@@ -110,8 +120,9 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
     if webcam:
         view_img = check_imshow()
         cudnn.benchmark = True  # set True to speed up constant image size inference
-        dataset = LoadStreams(source, img_size=imgsz, stride=stride)
+        dataset = LoadStreams(source, img_size=imgsz, stride=stride, w_width=w_width, w_height=w_height)
     else:
+        view_img = check_imshow()
         dataset = LoadImages(source, img_size=imgsz, stride=stride)
 
     for dirpath, dirnames, filenames in os.walk('runs/detect/sanitizer'):
@@ -273,6 +284,15 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                     count[1] = count[1] + 1
                     if count[0] == 1 and count[1] == 10:
                         count[0] = 0
+                        if check_qrcd[person_count] == False or check_sani[person_count] == False or check_temp[person_count] == False:
+                            check_siren[person_count] == True
+                            if message:
+                                msg.showinfo('경고!', '미이행자 발견!')
+                            plot_one_box(siren, im0, label="WARNING", color=colors(int(200), True),
+                                         line_thickness=line_thickness)
+                            if alarm:
+                                th1 = Thread(target=sound)
+                                th1.start()
 
                     plot_one_box(tmo_person, im0, label="person = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
