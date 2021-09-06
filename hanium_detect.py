@@ -30,6 +30,13 @@ def check(xyxy, xyxytemp):
     else:
         return True
 
+def check_final(xyxy, comp):
+    if comp+10 > xyxy[0] > comp-10:
+        return True
+    else:
+        return False
+
+
 exit = [500, 500, 500, 500]
 tmp = [100, 100, 100, 100]
 tmo_person = [200, 200, 200, 200]
@@ -41,6 +48,11 @@ siren = [200, 700, 200, 700]
 MAX_PERSON = 100
 count = [0, 0] #첫번째 숫자는 현재 화면에 사람이 있는지,없는지 체크 두번째 숫자는 10번연속 검출되어야 사람이 있다고 판정하기 위해서 사용
 deepcall_check=[0, 0, 0] #count와 마찬가지로, 객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
+
+sani_x = 850
+temp_x = 670
+qrcd_x = 0
+
 @torch.no_grad()
 def detect(weights='yolov5s.pt',  # model.pt path(s)
            source='data/images',  # file/dir/URL/glob, 0 for webcam
@@ -118,6 +130,9 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
     check_temp = [False for i in range(MAX_PERSON)]
     check_qrcd = [False for i in range(MAX_PERSON)]
     check_siren = [False for i in range(MAX_PERSON)]
+    check_sani_final = [True for i in range(MAX_PERSON)]
+    check_temp_final = [True for i in range(MAX_PERSON)]
+    check_qrcd_final = [True for i in range(MAX_PERSON)]
     person_count = 0
     # Run inference
     if device.type != 'cpu':
@@ -232,6 +247,20 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                         if save_crop:
                             save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
+                    if check_final(xyxy, sani_x) and not check_sani[person_count]:
+                        check_sani_final[person_count] = False
+
+                    if check_final(xyxy, temp_x) and not check_temp[person_count]:
+                        check_temp_final[person_count] = False
+
+                    if check_final(xyxy, qrcd_x) and not check_qrcd[person_count]:
+                        check_qrcd_final[person_count] = False
+
+                    if not check_sani_final[person_count] or not check_temp_final[person_count] or not check_qrcd_final[person_count]:
+                        plot_one_box(siren, im0, label="WARNING", color=colors(int(200), True),
+                                     line_thickness=line_thickness)
+                        # 사이렌 추가 부분
+
                 #여기부터 박스
                 if check_person:
                     count[1] = 0
@@ -244,15 +273,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                     count[1] = count[1] + 1
                     if count[0] == 1 and count[1] == 10:
                         count[0] = 0
-                        if check_qrcd[person_count] == False or check_sani[person_count] == False or check_temp[person_count] == False:
-                            check_siren[person_count] == True
-                            print()
-                            print("미이행자를 발견했습니다. 경보를 전파합니다")
-                            print()
-                            plot_one_box(siren, im0, label="WARNING", color=colors(int(200), True),
-                                         line_thickness=line_thickness)
-                            th1 = Thread(target=sound)
-                            th1.start()
 
                     plot_one_box(tmo_person, im0, label="person = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
