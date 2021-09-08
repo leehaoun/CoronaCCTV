@@ -28,7 +28,7 @@ def check(xyxy, xyxytemp):
         return False
     elif xyxy[2]+10 < xyxytemp[0]:
         return False
-    elif xyxy[3]+10< xyxytemp[1]:
+    elif xyxy[3]+10 < xyxytemp[1]:
         return False
     elif xyxy[1]-10 > xyxytemp[3]:
         return False
@@ -192,6 +192,9 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                 check_person = False
                 temp = [deepcall_check[0], deepcall_check[1], deepcall_check[2]]
                 for *xyxy, conf, cls in reversed(det): #1frame
+                    cv2.line(im0, (qrcd_x,0), (qrcd_x,1000), (255,0,0), 5) # blue
+                    cv2.line(im0, (temp_x,0), (temp_x,1000), (0,255,0), 5) # green
+                    cv2.line(im0, (sani_x,0), (sani_x,1000), (0,0,255), 5) # red
                     if cls.item() == 0.0 or cls.item() == 1.0:
                         for *xyxytmp, clstmp in reversed(det):
                             if clstmp.item() != 0.0 and clstmp.item() != 1.0 and check(xyxy, xyxytmp): #cls(손, 얼굴) clstmp(손소독,qr,온도계)
@@ -390,4 +393,3 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     check_requirements(exclude=('tensorboard', 'thop'))
     detect(**vars(opt))
-
