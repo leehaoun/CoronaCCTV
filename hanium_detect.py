@@ -30,8 +30,23 @@ def check(xyxy, xyxytemp):
     else:
         return True
 
+
 def check_final(xyxy, comp):
     if comp+10 > xyxy[0] > comp-10:
+        return True
+    else:
+        return False
+
+
+def check_enter(xyxy):
+    if 1410 > xyxy[0] > 1320 and 550 > xyxy[1] > 0:
+        return True
+    else:
+        return False
+
+
+def check_exit(xyxy):
+    if xyxy[1] > 1000:
         return True
     else:
         return False
@@ -48,10 +63,6 @@ siren = [200, 700, 200, 700]
 MAX_PERSON = 100
 count = [0, 0] #첫번째 숫자는 현재 화면에 사람이 있는지,없는지 체크 두번째 숫자는 10번연속 검출되어야 사람이 있다고 판정하기 위해서 사용
 deepcall_check=[0, 0, 0] #count와 마찬가지로, 객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
-
-sani_x = 850
-temp_x = 670
-qrcd_x = 0
 
 @torch.no_grad()
 def detect(weights='yolov5s.pt',  # model.pt path(s)
@@ -133,6 +144,17 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
     check_sani_final = [True for i in range(MAX_PERSON)]
     check_temp_final = [True for i in range(MAX_PERSON)]
     check_qrcd_final = [True for i in range(MAX_PERSON)]
+
+    sani_x = 0
+    sani_x_tmp1 = 0
+    sani_x_tmp2 = 0
+    temp_x = 0
+    temp_x_tmp1 = 0
+    temp_x_tmp2 = 0
+    qrcd_x = 0
+    qrcd_x_tmp1 = 0
+    qrcd_x_tmp2 = 0
+
     person_count = 0
     # Run inference
     if device.type != 'cpu':
@@ -181,6 +203,20 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                 check_person = False
                 temp = [deepcall_check[0], deepcall_check[1], deepcall_check[2]]
                 for *xyxy, conf, cls in reversed(det): #1frame
+
+                    if cls.item() == 2.0:
+                        sani_x_tmp1 = 0.3 * xyxy[0]
+                    elif cls.item() == 3.0:
+                        sani_x_tmp2 = 0.7 * xyxy[2]
+
+                    if cls.item() == 3.0:
+                        temp_x_tmp1 = 0.3 * xyxy[0]
+                    elif cls.item() == 4.0:
+                        temp_x_tmp2 = 0.7 * xyxy[2]
+
+                    if cls.item() == 4.0:
+                        qrcd_x_tmp1 = 0.3 * xyxy[0]
+
                     if cls.item() == 0.0 or cls.item() == 1.0:
                         for *xyxytmp, clstmp in reversed(det):
                             if clstmp.item() != 0.0 and clstmp.item() != 1.0 and check(xyxy, xyxytmp): #cls(손, 얼굴) clstmp(손소독,qr,온도계)
@@ -231,8 +267,14 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                             if deepcall_check[2] == 10:
                                                 check_qrcd[person_count] = True
 
-                        check_person = True
+                        if check_exit(xyxy):
+                            check_person = False
+                        elif check_enter(xyxy):
+                            check_person = True
 
+                    sani_x = sani_x_tmp1 + sani_x_tmp2
+                    temp_x = temp_x_tmp1 + temp_x_tmp2
+                    qrcd_x = qrcd_x_tmp1 + qrcd_x_tmp2
 
                     if save_txt: # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
