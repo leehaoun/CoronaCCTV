@@ -1,5 +1,5 @@
 # Dataset utils and dataloaders
-
+# 9월 6일 웹캠 화면 크기 조절 위해 line 267에 파라미터 추가
 import glob
 import hashlib
 import logging
@@ -264,7 +264,7 @@ class LoadWebcam:  # for inference
 
 
 class LoadStreams:  # multiple IP or RTSP cameras
-    def __init__(self, sources='streams.txt', img_size=640, stride=32):
+    def __init__(self, sources='streams.txt', img_size=640, stride=32, w_width=1280, w_height=720):
         self.mode = 'stream'
         self.img_size = img_size
         self.stride = stride
@@ -288,8 +288,8 @@ class LoadStreams:  # multiple IP or RTSP cameras
             s = eval(s) if s.isnumeric() else s  # i.e. s = '0' local webcam
             cap = cv2.VideoCapture(s)
             assert cap.isOpened(), f'Failed to open {s}'
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, w_width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, w_height)
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             self.fps[i] = max(cap.get(cv2.CAP_PROP_FPS) % 100, 0) or 30.0  # 30 FPS fallback
