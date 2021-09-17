@@ -213,19 +213,26 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                 check_person = False
                 temp = [deepcall_check[0], deepcall_check[1], deepcall_check[2]]
                 for *xyxy, conf, cls in reversed(det): #1frame
-
                     if cls.item() == 2.0:
-                        sani_x_tmp1 = 0.3 * xyxy[0]
+                        sani_x_tmp1 = 0.5 * xyxy[0]
                     elif cls.item() == 3.0:
-                        sani_x_tmp2 = 0.7 * xyxy[2]
+                        sani_x_tmp2 = 0.5 * xyxy[2]
 
                     if cls.item() == 3.0:
-                        temp_x_tmp1 = 0.3 * xyxy[0]
+                        temp_x_tmp1 = 0.5 * xyxy[0]
                     elif cls.item() == 4.0:
-                        temp_x_tmp2 = 0.7 * xyxy[2]
+                        temp_x_tmp2 = 0.5 * xyxy[2]
 
                     if cls.item() == 4.0:
-                        qrcd_x_tmp1 = 0.3 * xyxy[0]
+                        qrcd_x_tmp1 = 0.5 * xyxy[0]
+
+                    sani_x = int(sani_x_tmp1 + sani_x_tmp2)
+                    temp_x = int(temp_x_tmp1 + temp_x_tmp2)
+                    qrcd_x = int(qrcd_x_tmp1 + qrcd_x_tmp2)
+
+                    cv2.line(im0, (qrcd_x,0), (qrcd_x,1000), (255,0,0), 1) # blue
+                    cv2.line(im0, (temp_x,0), (temp_x,1000), (0,255,0), 1) # green
+                    cv2.line(im0, (sani_x,0), (sani_x,1000), (0,0,255), 1) # red    
 
                     if cls.item() == 0.0 or cls.item() == 1.0:
                         for *xyxytmp, clstmp in reversed(det):
@@ -282,10 +289,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                         elif check_enter(xyxy):
                             check_person = True
 
-                    sani_x = sani_x_tmp1 + sani_x_tmp2
-                    temp_x = temp_x_tmp1 + temp_x_tmp2
-                    qrcd_x = qrcd_x_tmp1 + qrcd_x_tmp2
-
                     if save_txt: # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
@@ -301,15 +304,17 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
 
                     if check_final(xyxy, sani_x) and not check_sani[person_count]:
                         check_sani_final[person_count] = False
+                        plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
+                                     line_thickness=line_thickness)
 
                     if check_final(xyxy, temp_x) and not check_temp[person_count]:
                         check_temp_final[person_count] = False
+                        plot_one_box(siren, im0, label="Not Temp!!!", color=colors(int(200), True),
+                                     line_thickness=line_thickness)
 
                     if check_final(xyxy, qrcd_x) and not check_qrcd[person_count]:
                         check_qrcd_final[person_count] = False
-
-                    if not check_sani_final[person_count] or not check_temp_final[person_count] or not check_qrcd_final[person_count]:
-                        plot_one_box(siren, im0, label="WARNING", color=colors(int(200), True),
+                        plot_one_box(siren, im0, label="Not QR!!!", color=colors(int(200), True),
                                      line_thickness=line_thickness)
                         # 사이렌 추가 부분
 
@@ -327,8 +332,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                         count[0] = 0
                         if check_qrcd[person_count] == False or check_sani[person_count] == False or check_temp[person_count] == False:
                             check_siren[person_count] == True
-                            if message:
-                                msg.showinfo('경고!', '미이행자 발견!')
                             plot_one_box(siren, im0, label="WARNING", color=colors(int(200), True),
                                          line_thickness=line_thickness)
                             if alarm:
