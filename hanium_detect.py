@@ -1,6 +1,8 @@
 # 9월 6일 그 전에 구현된 경보, 메시지 기능 UI 연동 구현 위해서 다시 추가, UI 관련으로 detect 파라미터 추가
 
 import argparse
+from math import fabs
+from re import X
 import time
 from pathlib import Path
 import cv2
@@ -37,7 +39,7 @@ def check(xyxy, xyxytemp):
 
 
 def check_final(xyxy, comp):
-    if comp+10 > xyxy[0] > comp-10:
+    if comp == xyxy[0]:
         return True
     else:
         return False
@@ -59,15 +61,11 @@ def check_exit(xyxy):
 
 exit = [500, 500, 500, 500]
 tmp = [100, 100, 100, 100]
-tmo_person = [200, 200, 200, 200]
 tmp_sani = [200, 300, 200, 300]
 tmp_temp = [200, 400, 200, 400]
 tmp_qrcd = [200, 500, 200, 500]
-pcount = [200, 600, 200, 600]
 siren = [200, 700, 200, 700]
-MAX_PERSON = 100
-count = [0, 0] #첫번째 숫자는 현재 화면에 사람이 있는지,없는지 체크 두번째 숫자는 10번연속 검출되어야 사람이 있다고 판정하기 위해서 사용
-deepcall_check=[0, 0, 0] #count와 마찬가지로, 객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
+deepcall_check=[0, 0, 0] #객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
 
 @torch.no_grad()
 def detect(weights='yolov5s.pt',  # model.pt path(s)
@@ -147,14 +145,11 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
         # Remove regular files, ignore directories
         for filename in filenames:
             os.unlink(os.path.join(dirpath, filename))
-    check_sani = [False for i in range(MAX_PERSON)]
-    check_temp = [False for i in range(MAX_PERSON)]
-    check_qrcd = [False for i in range(MAX_PERSON)]
-    check_siren = [False for i in range(MAX_PERSON)]
-    check_sani_final = [True for i in range(MAX_PERSON)]
-    check_temp_final = [True for i in range(MAX_PERSON)]
-    check_qrcd_final = [True for i in range(MAX_PERSON)]
-
+    check_sani = False
+    check_temp = False
+    check_qrcd = False
+    check_siren = False
+    start_x = 0
     sani_x = 0
     sani_x_tmp1 = 0
     sani_x_tmp2 = 0
@@ -215,6 +210,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                 for *xyxy, conf, cls in reversed(det): #1frame
                     if cls.item() == 2.0:
                         sani_x_tmp1 = 0.5 * xyxy[0]
+                        start_x = int(0.5 * xyxy[2])+ int(0.5 * vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     elif cls.item() == 3.0:
                         sani_x_tmp2 = 0.5 * xyxy[2]
 
@@ -225,11 +221,12 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
 
                     if cls.item() == 4.0:
                         qrcd_x_tmp1 = 0.5 * xyxy[0]
-
+                   
                     sani_x = int(sani_x_tmp1 + sani_x_tmp2)
                     temp_x = int(temp_x_tmp1 + temp_x_tmp2)
                     qrcd_x = int(qrcd_x_tmp1 + qrcd_x_tmp2)
 
+                    cv2.line(im0, (start_x, 0), (start_x, 1000), (255,255,255), 1)
                     cv2.line(im0, (qrcd_x,0), (qrcd_x,1000), (255,0,0), 1) # blue
                     cv2.line(im0, (temp_x,0), (temp_x,1000), (0,255,0), 1) # green
                     cv2.line(im0, (sani_x,0), (sani_x,1000), (0,0,255), 1) # red    
@@ -251,7 +248,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                          line_thickness=line_thickness)
                                             deepcall_check[0] = deepcall_check[0] + 1
                                             if deepcall_check[0] == 10:
-                                                check_sani[person_count] = True
+                                                check_sani = True
                                 elif cls.item() == 1.0 and clstmp.item() == 3.0:
                                     x1 = xyxytmp[0]
                                     x2 = xyxytmp[2]
@@ -267,7 +264,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                          line_thickness=line_thickness)
                                             deepcall_check[1] = deepcall_check[1] + 1
                                             if deepcall_check[1] == 10:
-                                                check_temp[person_count] = True
+                                                check_temp = True
                                 elif cls.item() == 0.0 and clstmp.item() == 4.0:
                                     x1 = xyxytmp[0]
                                     x2 = xyxytmp[2]
@@ -282,7 +279,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                          line_thickness=line_thickness)
                                             deepcall_check[2] = deepcall_check[2] + 1
                                             if deepcall_check[2] == 10:
-                                                check_qrcd[person_count] = True
+                                                check_qrcd = True
 
                         if check_exit(xyxy):
                             check_person = False
@@ -302,64 +299,55 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                         if save_crop:
                             save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
 
-                    if check_final(xyxy, sani_x) and not check_sani[person_count]:
-                        check_sani_final[person_count] = False
-                        plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
-                                     line_thickness=line_thickness)
+                    if cls.item() == 1.0 and check_final(xyxy, start_x):
+                        check_sani = False
+        
+                    if cls.item() == 1.0 and check_final(xyxy, sani_x):
+                        check_temp = False
+                        if not check_sani:
+                            plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
+                                        line_thickness=line_thickness)        
+                            if alarm:
+                                th1 = Thread(target=sound)
+                                th1.start()             
 
-                    if check_final(xyxy, temp_x) and not check_temp[person_count]:
-                        check_temp_final[person_count] = False
-                        plot_one_box(siren, im0, label="Not Temp!!!", color=colors(int(200), True),
-                                     line_thickness=line_thickness)
-
-                    if check_final(xyxy, qrcd_x) and not check_qrcd[person_count]:
-                        check_qrcd_final[person_count] = False
-                        plot_one_box(siren, im0, label="Not QR!!!", color=colors(int(200), True),
-                                     line_thickness=line_thickness)
-                        # 사이렌 추가 부분
-
-                #여기부터 박스
-                if check_person:
-                    count[1] = 0
-                    if count[0] == 0:
-                        person_count = person_count + 1
-                        count[0] = 1
-                    plot_one_box(tmo_person, im0, label="person = O", color=colors(int(200), True),
-                                 line_thickness=line_thickness)
-                else:
-                    count[1] = count[1] + 1
-                    if count[0] == 1 and count[1] == 10:
-                        count[0] = 0
-                        if check_qrcd[person_count] == False or check_sani[person_count] == False or check_temp[person_count] == False:
-                            check_siren[person_count] == True
-                            plot_one_box(siren, im0, label="WARNING", color=colors(int(200), True),
-                                         line_thickness=line_thickness)
+                    if cls.item() == 1.0 and check_final(xyxy, temp_x):
+                        check_qrcd = False
+                        if not check_temp:
+                            plot_one_box(siren, im0, label="Not Temp!!!", color=colors(int(200), True),
+                                        line_thickness=line_thickness)        
                             if alarm:
                                 th1 = Thread(target=sound)
                                 th1.start()
 
-                    plot_one_box(tmo_person, im0, label="person = X", color=colors(int(200), True),
-                                 line_thickness=line_thickness)
-                if check_sani[person_count]:
+                    if cls.item() == 1.0 and check_final(xyxy, qrcd_x):
+                        if not check_qrcd:
+                            plot_one_box(siren, im0, label="Not QRCD!!!", color=colors(int(200), True),
+                                        line_thickness=line_thickness)        
+                            if alarm:
+                                th1 = Thread(target=sound)
+                                th1.start()
+                        # 사이렌 추가 부분
+
+                #여기부터 박스
+                if check_sani:
                     plot_one_box(tmp_sani, im0, label="sani = O", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 else:
                     plot_one_box(tmp_sani, im0, label="sani = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
-                if check_temp[person_count]:
+                if check_temp:
                     plot_one_box(tmp_temp, im0, label="temp = O", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 else:
                     plot_one_box(tmp_temp, im0, label="temp = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
-                if check_qrcd[person_count]:
+                if check_qrcd:
                     plot_one_box(tmp_qrcd, im0, label="qrcd = O", color=colors(int(200), True),
                                  line_thickness=line_thickness)
                 else:
                     plot_one_box(tmp_qrcd, im0, label="qrcd = X", color=colors(int(200), True),
                                  line_thickness=line_thickness)
-                plot_one_box(pcount, im0, label=f"count = {person_count}", color=colors(int(200), True),
-                             line_thickness=line_thickness)
                 # 박스끝
                 if temp == deepcall_check:
                     deepcall_check[0] = 0
