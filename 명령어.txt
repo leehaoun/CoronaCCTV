@@ -1,9 +1,9 @@
 #train 코드
-python train.py  --batch-size 64 --data data/haoun.yaml --cfg models/yolov5s-custom.yaml --device 0
+python train.py  --batch-size 32 --data data/haoun.yaml --cfg models/yolov5s-custom.yaml --weights custom-v3.pt --device 0
 #test 코드
-python hanium_detect.py --source 1.jpg --weights weights/custom-v2.pt --conf 0.55 --device 0
-python hanium_detect.py --source data/videos/aa.mp4 --weights weights/custom-v2.pt --conf 0.55 --device 0
-python hanium_detect.py --source data/videos/testvideo.mp4 --weights weights/custom-v2.pt --conf 0.55 --device 0
-python hanium_detect.py  --source 0 --weights weights/custom-v2.pt --conf 0.4 --device 0 (웹캠모드)
+python hanium_detect.py --source 1.jpg --weights weights/custom-v3.pt --conf 0.55 --device 0
+python hanium_detect.py --source data/videos/aa.mp4 --weights weights/custom-v3.pt --conf 0.55 --device 0
+python hanium_detect.py --source data/videos/testvideo.mp4 --weights weights/custom-v3.pt --conf 0.55 --device 0
+python hanium_detect.py  --source 0 --weights weights/custom-v3.pt --conf 0.4 --device 0 (웹캠모드)
 
  
