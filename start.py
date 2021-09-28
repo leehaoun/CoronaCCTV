@@ -1,4 +1,4 @@
 import hanium_detect
    
    
-hanium_detect.detect(source='data/videos/perfect.mp4', weights='weights/custom-v2.pt', conf_thres=0.55, device='0' )
+hanium_detect.detect(source='data/videos/bb.mp4', weights='weights/custom-v5.pt', conf_thres=0.55, device='0' )
