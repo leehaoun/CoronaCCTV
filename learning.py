@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn  # 뉴럴 네트워크를 생성하기 위한 패키지
 import torch.optim as optim
@@ -69,7 +70,7 @@ class CNN(nn.Module):
         )
 
         self.fc = torch.nn.Sequential(
-            torch.nn.Linear(8192, 4)
+            torch.nn.Linear(8192, 8)
         )
 
     def forward(self, x):
@@ -84,6 +85,11 @@ class CNN(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.fc(out)
         return out
+def custom_imshow(img): 
+    img = img.numpy() 
+    plt.imshow(np.transpose(img, (1, 2, 0)))
+    plt.show()
+
 
 def deepcall():
     transform = transforms.Compose(
@@ -94,14 +100,17 @@ def deepcall():
     )
     test_datasets = datasets.ImageFolder('./tmp/img', transform=transform)
     test_loader = DataLoader(test_datasets, batch_size=1, shuffle=False)
-    model = CNN().to(device)
+    model = CNN()
     model.load_state_dict(torch.load('./8192_weights.pth'))
-    model.eval().to(device)  # model = 훈련이 완료 된 모델
+    model.eval()  # model = 훈련이 완료 된 모델
     with torch.no_grad():
         for i, data in enumerate(test_loader):
-          inputs, labels = data
-          inputs = inputs.to(device)
+          inputs= data[0]
           y_pred = model(inputs)
-          x = torch.argmax(y_pred) #0 = 손소독완료 1 = 체온완료 2 = qr완료 3 = 미이행
+          x = torch.argmax(y_pred) #| 0,1 = 손소독완료,x | 2,3 = 체온완료,x | 4,5 = qr완료,x | 6,7 = 마스크완료,x  |
+        #   if x != 3: 
+        #     print(i," ",x)
+        #     custom_imshow(inputs[0])
           return x
+# deepcall()
 

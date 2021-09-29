@@ -323,7 +323,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                         img_trim = im0s[int(y1):int(y2), int(x1-rx):int(x2+rx)]
                                         cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
                                         if len(os.listdir("./tmp/img/1")) != 0:
-                                            if deepcall() == 1:
+                                            if deepcall() == 2:
                                                 plot_one_box(tmp, im0, label="check = temperatrue",
                                                             color=colors(int(cls), True),
                                                             line_thickness=line_thickness)
@@ -335,11 +335,11 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                         x2 = xyxytmp[2]
                                         y1 = xyxytmp[1]
                                         y2 = xyxytmp[3]
-                                        rx = (x2 - x1) / 4
+                                        rx = (x2 - x1) / 2
                                         img_trim = im0s[int(y1):int(y2), int(x1-rx):int(x2+rx)]
                                         cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
                                         if len(os.listdir("./tmp/img/1")) != 0:
-                                            if deepcall() == 2:
+                                            if deepcall() == 4:
                                                 plot_one_box(tmp, im0, label="check = qrcode", color=colors(int(cls), True),
                                                             line_thickness=line_thickness)
                                                 deepcall_check[2] = deepcall_check[2] + 1
