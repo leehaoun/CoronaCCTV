@@ -10,6 +10,7 @@ import torch
 import torch.backends.cudnn as cudnn
 import os
 import winsound
+import threading
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
@@ -23,6 +24,7 @@ from tkinter import messagebox as msg
 
 def sound():
     winsound.PlaySound('siren.wav', winsound.SND_FILENAME | winsound.SND_PURGE)
+
 
 
 def check(xyxy, xyxytemp):
@@ -109,7 +111,7 @@ def qr_pos_check(xyxy):
         return True
 
 
-def check_tmp(xyxy, comp):
+def check_Head_Cross(xyxy, comp):
     if comp + 10 > xyxy[0] > comp - 10:
         return True
     else:
@@ -272,8 +274,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
                 # Write results
                 check_person = False
-                temp = [deepcall_check[0], deepcall_check[1], deepcall_check[2], deepcall_check[3]]
-
                 if init_check != [1, 1, 1]:
                     init_check = [0, 0, 0]
                 else:
@@ -400,10 +400,10 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                     check_qrcd = True
 
                         if cls.item() == 1.0:
-                            if check_tmp(xyxy, start_x):
+                            if check_Head_Cross(xyxy, start_x):
                                 check_sani = False
 
-                            if check_tmp(xyxy, sani_x):
+                            if check_Head_Cross(xyxy, sani_x):
                                 check_temp = False
                                 if not check_sani:
                                     plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
@@ -412,7 +412,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                         th1 = Thread(target=sound)
                                         th1.start()
 
-                            if check_tmp(xyxy, temp_x):
+                            if check_Head_Cross(xyxy, temp_x):
                                 check_qrcd = False
                                 if not check_temp:
                                     plot_one_box(siren, im0, label="Not temp!!!", color=colors(int(200), True),
@@ -421,7 +421,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                         th1 = Thread(target=sound)
                                         th1.start()
 
-                            if check_tmp(xyxy, qrcd_x):
+                            if check_Head_Cross(xyxy, qrcd_x):
                                 if not check_qrcd:
                                     plot_one_box(siren, im0, label="Not qrcd!!!", color=colors(int(200), True),
                                                  line_thickness=line_thickness)
@@ -439,33 +439,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                         plot_one_box(qr_pos, im0, label="Place QR", color=colors(255, True),
                                      line_thickness=line_thickness)
 
-                if key:
-                    # 여기부터 박스
-                    if check_sani:
-                        plot_one_box(tmp_sani, im0, label="sani = O", color=colors(int(200), True),
-                                     line_thickness=line_thickness)
-                    else:
-                        plot_one_box(tmp_sani, im0, label="sani = X", color=colors(int(200), True),
-                                     line_thickness=line_thickness)
-                    if check_temp:
-                        plot_one_box(tmp_temp, im0, label="temp = O", color=colors(int(200), True),
-                                     line_thickness=line_thickness)
-                    else:
-                        plot_one_box(tmp_temp, im0, label="temp = X", color=colors(int(200), True),
-                                     line_thickness=line_thickness)
-                    if check_qrcd:
-                        plot_one_box(tmp_qrcd, im0, label="qrcd = O", color=colors(int(200), True),
-                                     line_thickness=line_thickness)
-                    else:
-                        plot_one_box(tmp_qrcd, im0, label="qrcd = X", color=colors(int(200), True),
-                                     line_thickness=line_thickness)
-
-                    if temp == deepcall_check:
-                        deepcall_check[0] = 0
-                        deepcall_check[1] = 0
-                        deepcall_check[2] = 0
-                        deepcall_check[3] = 0
-                    # 우리가 추가한 코드 끝
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
