@@ -26,50 +26,83 @@ def sound():
 
 
 def check(xyxy, xyxytemp):
-    if xyxy[0]-10> xyxytemp[2]:
+    if xyxy[0] - 10 > xyxytemp[2]:
         return False
-    elif xyxy[2]+10 < xyxytemp[0]:
+    elif xyxy[2] + 10 < xyxytemp[0]:
         return False
-    elif xyxy[3]+10 < xyxytemp[1]:
+    elif xyxy[3] + 10 < xyxytemp[1]:
         return False
-    elif xyxy[1]-10 > xyxytemp[3]:
+    elif xyxy[1] - 10 > xyxytemp[3]:
         return False
     else:
         return True
 
 
-def check_final(xyxy, comp):
-    if comp == xyxy[0]:
+def sani_pos_check(xyxy):
+    if xyxy[0] > sani_pos[2]:
+        return False
+    elif xyxy[2] < sani_pos[0]:
+        return False
+    elif xyxy[3] < sani_pos[1]:
+        return False
+    elif xyxy[1] > sani_pos[3]:
+        return False
+    else:
+        return True
+
+
+def temp_pos_check(xyxy):
+    if xyxy[0] > temp_pos[2]:
+        return False
+    elif xyxy[2] < temp_pos[0]:
+        return False
+    elif xyxy[3] < temp_pos[1]:
+        return False
+    elif xyxy[1] > temp_pos[3]:
+        return False
+    else:
+        return True
+
+
+def qr_pos_check(xyxy):
+    if xyxy[0] > qr_pos[2]:
+        return False
+    elif xyxy[2] < qr_pos[0]:
+        return False
+    elif xyxy[3] < qr_pos[1]:
+        return False
+    elif xyxy[1] > qr_pos[3]:
+        return False
+    else:
+        return True
+
+
+def check_tmp(xyxy, comp):
+    if comp + 10 > xyxy[0] > comp - 10:
         return True
     else:
         return False
 
 
-def check_enter(xyxy):
-    if 1410 > xyxy[0] > 1320 and 550 > xyxy[1] > 0:
-        return True
-    else:
-        return False
-
-
-def check_exit(xyxy):
-    if xyxy[1] > 1000:
-        return True
-    else:
-        return False
-
-
+# --------------텍스트박스 위치--------------------#
+center = [960, 100, 960, 100]
 exit = [500, 500, 500, 500]
 tmp = [100, 100, 100, 100]
 tmp_sani = [200, 300, 200, 300]
 tmp_temp = [200, 400, 200, 400]
 tmp_qrcd = [200, 500, 200, 500]
+tmp_mask = [200, 600, 200, 600]
 siren = [200, 700, 200, 700]
-deepcall_check=[0, 0, 0] #객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
+sani_pos = [1560, 380, 1640, 500]
+temp_pos = [960, 280, 1040, 385]
+qr_pos = [430, 270, 520, 370]
+# ---------------텍스트박스 위치-------------------#
+deepcall_check = [0, 0, 0, 0]  # 객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
+
 
 @torch.no_grad()
 def detect(weights='yolov5s.pt',  # model.pt path(s)
-           source='data/images', # file/dir/URL/glob, 0 for webcam
+           source='data/images',  # file/dir/URL/glob, 0 for webcam
            w_width=1280,
            w_height=720,
            imgsz=640,  # inference size (pixels)
@@ -145,10 +178,10 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
         # Remove regular files, ignore directories
         for filename in filenames:
             os.unlink(os.path.join(dirpath, filename))
+
     check_sani = False
     check_temp = False
     check_qrcd = False
-    check_siren = False
     start_x = 0
     sani_x = 0
     sani_x_tmp1 = 0
@@ -159,7 +192,8 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
     qrcd_x = 0
     qrcd_x_tmp1 = 0
     qrcd_x_tmp2 = 0
-
+    key = False
+    init_check = [0, 0, 0]  # 3객체가 적당한 위치에 배치되었는지 확인하는 용도, [1,1,1]이 저장된다면 key를 true로 바꾸고 검출모드 시작
     person_count = 0
     # Run inference
     if device.type != 'cpu':
@@ -206,154 +240,201 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
                 # Write results
                 check_person = False
-                temp = [deepcall_check[0], deepcall_check[1], deepcall_check[2]]
-                for *xyxy, conf, cls in reversed(det): #1frame
-                    if cls.item() == 2.0:
-                        sani_x_tmp1 = 0.5 * xyxy[0]
-                        start_x = int(0.5 * xyxy[2])+ int(0.5 * vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    elif cls.item() == 3.0:
-                        sani_x_tmp2 = 0.5 * xyxy[2]
+                temp = [deepcall_check[0], deepcall_check[1], deepcall_check[2], deepcall_check[3]]
 
-                    if cls.item() == 3.0:
-                        temp_x_tmp1 = 0.5 * xyxy[0]
-                    elif cls.item() == 4.0:
-                        temp_x_tmp2 = 0.5 * xyxy[2]
+                if init_check != [1, 1, 1]:
+                    init_check = [0, 0, 0]
+                else:
+                    key = True
 
-                    if cls.item() == 4.0:
-                        qrcd_x_tmp1 = 0.5 * xyxy[0]
-                   
-                    sani_x = int(sani_x_tmp1 + sani_x_tmp2)
-                    temp_x = int(temp_x_tmp1 + temp_x_tmp2)
-                    qrcd_x = int(qrcd_x_tmp1 + qrcd_x_tmp2)
-
-                    cv2.line(im0, (start_x, 0), (start_x, 1000), (255,255,255), 1)
-                    cv2.line(im0, (qrcd_x,0), (qrcd_x,1000), (255,0,0), 1) # blue
-                    cv2.line(im0, (temp_x,0), (temp_x,1000), (0,255,0), 1) # green
-                    cv2.line(im0, (sani_x,0), (sani_x,1000), (0,0,255), 1) # red    
-
-                    if cls.item() == 0.0 or cls.item() == 1.0:
-                        for *xyxytmp, clstmp in reversed(det):
-                            if clstmp.item() != 0.0 and clstmp.item() != 1.0 and check(xyxy, xyxytmp): #cls(손, 얼굴) clstmp(손소독,qr,온도계)
-                                if cls.item() == 0.0 and clstmp.item() == 2.0:
-                                    x1 = xyxytmp[0]
-                                    x2 = xyxytmp[2]
-                                    y1 = xyxytmp[1]
-                                    y2 = xyxytmp[3]
-                                    ry = (y2 - y1)/8
-                                    img_trim = im0s[int(y1-ry):int(y2), int(x1):int(x2)]
-                                    cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                    if len(os.listdir("./tmp/img/1")) != 0:
-                                        if deepcall() == 0:
-                                            plot_one_box(tmp, im0, label="check = sanitizer", color=colors(int(cls), True),
-                                                         line_thickness=line_thickness)
-                                            deepcall_check[0] = deepcall_check[0] + 1
-                                            if deepcall_check[0] == 10:
-                                                check_sani = True
-                                elif cls.item() == 1.0 and clstmp.item() == 3.0:
-                                    x1 = xyxytmp[0]
-                                    x2 = xyxytmp[2]
-                                    y1 = xyxytmp[1]
-                                    y2 = xyxytmp[3]
-                                    rx = (x2 - x1) / 2
-                                    img_trim = im0s[int(y1):int(y2), int(x1-rx):int(x2+rx)]
-                                    cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                    if len(os.listdir("./tmp/img/1")) != 0:
-                                        if deepcall() == 1:
-                                            plot_one_box(tmp, im0, label="check = temperatrue",
-                                                         color=colors(int(cls), True),
-                                                         line_thickness=line_thickness)
-                                            deepcall_check[1] = deepcall_check[1] + 1
-                                            if deepcall_check[1] == 10:
-                                                check_temp = True
-                                elif cls.item() == 0.0 and clstmp.item() == 4.0:
-                                    x1 = xyxytmp[0]
-                                    x2 = xyxytmp[2]
-                                    y1 = xyxytmp[1]
-                                    y2 = xyxytmp[3]
-                                    rx = (x2 - x1) / 4
-                                    img_trim = im0s[int(y1):int(y2), int(x1-rx):int(x2+rx)]
-                                    cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                    if len(os.listdir("./tmp/img/1")) != 0:
-                                        if deepcall() == 2:
-                                            plot_one_box(tmp, im0, label="check = qrcode", color=colors(int(cls), True),
-                                                         line_thickness=line_thickness)
-                                            deepcall_check[2] = deepcall_check[2] + 1
-                                            if deepcall_check[2] == 10:
-                                                check_qrcd = True
-
-                        if check_exit(xyxy):
-                            check_person = False
-                        elif check_enter(xyxy):
-                            check_person = True
-
-                    if save_txt: # Write to file
+                for *xyxy, conf, cls in reversed(det):  # 1frame
+                    if cls.item() == 2.0 and sani_pos_check(xyxy):
+                        init_check[0] = 1
+                    if cls.item() == 3.0 and temp_pos_check(xyxy):
+                        init_check[1] = 1
+                    if cls.item() == 4.0 and qr_pos_check(xyxy):
+                        init_check[2] = 1
+                    if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
-
                     if save_img or save_crop or view_img:  # Add bbox to image
                         c = int(cls)  # integer class
                         label = None if hide_labels else (names[c] if hide_conf else f'{names[c]} {conf:.2f}')
                         plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=line_thickness)
                         if save_crop:
                             save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                    # 여기부터 우리가 추가한 코드이고, 3객체를 올바른 위치에 배치시키면 key를 True로 바꾸면서 검출모드가 시작된다.
+                    if key:
+                        plot_one_box(center, im0, label="ON DETECTING", color=colors(int(0), True),
+                                     line_thickness=line_thickness)
+                        if cls.item() == 2.0:
+                            sani_x_tmp1 = 0.5 * xyxy[0]
+                            start_x = int(0.5 * xyxy[2]) + int(0.5 * vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        elif cls.item() == 3.0:
+                            sani_x_tmp2 = 0.5 * xyxy[2]
 
-                    if cls.item() == 1.0 and check_final(xyxy, start_x):
-                        check_sani = False
-        
-                    if cls.item() == 1.0 and check_final(xyxy, sani_x):
-                        check_temp = False
-                        if not check_sani:
-                            plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
-                                        line_thickness=line_thickness)        
-                            if alarm:
-                                th1 = Thread(target=sound)
-                                th1.start()             
+                        if cls.item() == 3.0:
+                            temp_x_tmp1 = 0.5 * xyxy[0]
+                        elif cls.item() == 4.0:
+                            temp_x_tmp2 = 0.5 * xyxy[2]
 
-                    if cls.item() == 1.0 and check_final(xyxy, temp_x):
-                        check_qrcd = False
-                        if not check_temp:
-                            plot_one_box(siren, im0, label="Not Temp!!!", color=colors(int(200), True),
-                                        line_thickness=line_thickness)        
-                            if alarm:
-                                th1 = Thread(target=sound)
-                                th1.start()
+                        if cls.item() == 4.0:
+                            qrcd_x_tmp1 = 0.5 * xyxy[0]
 
-                    if cls.item() == 1.0 and check_final(xyxy, qrcd_x):
-                        if not check_qrcd:
-                            plot_one_box(siren, im0, label="Not QRCD!!!", color=colors(int(200), True),
-                                        line_thickness=line_thickness)        
-                            if alarm:
-                                th1 = Thread(target=sound)
-                                th1.start()
-                        # 사이렌 추가 부분
+                        sani_x = int(sani_x_tmp1 + sani_x_tmp2)
+                        temp_x = int(temp_x_tmp1 + temp_x_tmp2)
+                        qrcd_x = int(qrcd_x_tmp1 + qrcd_x_tmp2)
 
-                #여기부터 박스
-                if check_sani:
-                    plot_one_box(tmp_sani, im0, label="sani = O", color=colors(int(200), True),
-                                 line_thickness=line_thickness)
-                else:
-                    plot_one_box(tmp_sani, im0, label="sani = X", color=colors(int(200), True),
-                                 line_thickness=line_thickness)
-                if check_temp:
-                    plot_one_box(tmp_temp, im0, label="temp = O", color=colors(int(200), True),
-                                 line_thickness=line_thickness)
-                else:
-                    plot_one_box(tmp_temp, im0, label="temp = X", color=colors(int(200), True),
-                                 line_thickness=line_thickness)
-                if check_qrcd:
-                    plot_one_box(tmp_qrcd, im0, label="qrcd = O", color=colors(int(200), True),
-                                 line_thickness=line_thickness)
-                else:
-                    plot_one_box(tmp_qrcd, im0, label="qrcd = X", color=colors(int(200), True),
-                                 line_thickness=line_thickness)
-                # 박스끝
-                if temp == deepcall_check:
-                    deepcall_check[0] = 0
-                    deepcall_check[1] = 0
-                    deepcall_check[2] = 0
+                        cv2.line(im0, (start_x, 0), (start_x, 1000), (255, 255, 255), 1)
+                        cv2.line(im0, (qrcd_x, 0), (qrcd_x, 1000), (255, 0, 0), 1)  # blue
+                        cv2.line(im0, (temp_x, 0), (temp_x, 1000), (0, 255, 0), 1)  # green
+                        cv2.line(im0, (sani_x, 0), (sani_x, 1000), (0, 0, 255), 1)  # red
 
+                        if cls.item() == 0.0 or cls.item() == 1.0:
+                            # check mask
+                            if cls.item() == 1.0:
+                                if start_x > xyxy[0] > start_x - 50:
+                                    x1 = xyxy[0]
+                                    x2 = xyxy[2]
+                                    y1 = xyxy[1]
+                                    y2 = xyxy[3]
+                                    img_trim = im0s[int(y1):int(y2), int(x1):int(x2)]
+                                    cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
+                                    if deepcall() == 7:
+                                        plot_one_box(tmp, im0, label="check = not mask", color=colors(int(cls), True),
+                                                     line_thickness=line_thickness)
+                                        deepcall_check[3] = deepcall_check[3] + 1
+                                        if deepcall_check[3] == 5:
+                                            plot_one_box(siren, im0, label="Not Mask!!!", color=colors(int(200), True),
+                                                         line_thickness=line_thickness)
+                                            if alarm:
+                                                th1 = Thread(target=sound)
+                                                th1.start()
+                                    else:
+                                        plot_one_box(tmp, im0, label="check = mask", color=colors(int(cls), True),
+                                                     line_thickness=line_thickness)
+
+                            for *xyxytmp, clstmp in reversed(det):
+                                if clstmp.item() != 0.0 and clstmp.item() != 1.0 and check(xyxy,
+                                                                                           xyxytmp):  # cls(손, 얼굴) clstmp(손소독,qr,온도계)
+                                    if cls.item() == 0.0 and clstmp.item() == 2.0:
+                                        x1 = xyxytmp[0]
+                                        x2 = xyxytmp[2]
+                                        y1 = xyxytmp[1]
+                                        y2 = xyxytmp[3]
+                                        ry = (y2 - y1) / 8
+                                        img_trim = im0s[int(y1 - ry):int(y2), int(x1):int(x2)]
+                                        cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
+                                        if len(os.listdir("./tmp/img/1")) != 0:
+                                            if deepcall() == 0:
+                                                plot_one_box(tmp, im0, label="check = sanitizer",
+                                                             color=colors(int(cls), True),
+                                                             line_thickness=line_thickness)
+                                                deepcall_check[0] = deepcall_check[0] + 1
+                                                if deepcall_check[0] == 5:
+                                                    check_sani = True
+                                    elif cls.item() == 1.0 and clstmp.item() == 3.0:
+                                        x1 = xyxytmp[0]
+                                        x2 = xyxytmp[2]
+                                        y1 = xyxytmp[1]
+                                        y2 = xyxytmp[3]
+                                        rx = (x2 - x1) / 2
+                                        img_trim = im0s[int(y1):int(y2), int(x1 - rx):int(x2 + rx)]
+                                        cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
+                                        if len(os.listdir("./tmp/img/1")) != 0:
+                                            if deepcall() == 2:
+                                                plot_one_box(tmp, im0, label="check = temperatrue",
+                                                             color=colors(int(cls), True),
+                                                             line_thickness=line_thickness)
+                                                deepcall_check[1] = deepcall_check[1] + 1
+                                                if deepcall_check[1] == 10:
+                                                    check_temp = True
+                                    elif cls.item() == 0.0 and clstmp.item() == 4.0:
+                                        x1 = xyxytmp[0]
+                                        x2 = xyxytmp[2]
+                                        y1 = xyxytmp[1]
+                                        y2 = xyxytmp[3]
+                                        rx = (x2 - x1) / 2
+                                        img_trim = im0s[int(y1):int(y2), int(x1 - rx):int(x2 + rx)]
+                                        cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
+                                        if len(os.listdir("./tmp/img/1")) != 0:
+                                            if deepcall() == 4:
+                                                plot_one_box(tmp, im0, label="check = qrcode",
+                                                             color=colors(int(cls), True),
+                                                             line_thickness=line_thickness)
+                                                deepcall_check[2] = deepcall_check[2] + 1
+                                                if deepcall_check[2] == 10:
+                                                    check_qrcd = True
+
+                        if cls.item() == 1.0:
+                            if check_tmp(xyxy, start_x):
+                                check_sani = False
+
+                            if check_tmp(xyxy, sani_x):
+                                check_temp = False
+                                if not check_sani:
+                                    plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
+                                                 line_thickness=line_thickness)
+                                    if alarm:
+                                        th1 = Thread(target=sound)
+                                        th1.start()
+
+                            if check_tmp(xyxy, temp_x):
+                                check_qrcd = False
+                                if not check_temp:
+                                    plot_one_box(siren, im0, label="Not temp!!!", color=colors(int(200), True),
+                                                 line_thickness=line_thickness)
+                                    if alarm:
+                                        th1 = Thread(target=sound)
+                                        th1.start()
+
+                            if check_tmp(xyxy, qrcd_x):
+                                if not check_qrcd:
+                                    plot_one_box(siren, im0, label="Not qrcd!!!", color=colors(int(200), True),
+                                                 line_thickness=line_thickness)
+                                    if alarm:
+                                        th1 = Thread(target=sound)
+                                        th1.start()
+
+                    else:  # key=true로 설정되기 이전에 보여지는 것들입니다.
+                        plot_one_box(center, im0, label="SETTING.....", color=colors(int(0), True),
+                                     line_thickness=line_thickness)
+                        plot_one_box(sani_pos, im0, label="Place Sani", color=colors(0, True),
+                                     line_thickness=line_thickness)
+                        plot_one_box(temp_pos, im0, label="Place Temp", color=colors(127, True),
+                                     line_thickness=line_thickness)
+                        plot_one_box(qr_pos, im0, label="Place QR", color=colors(255, True),
+                                     line_thickness=line_thickness)
+
+                if key:
+                    # 여기부터 박스
+                    if check_sani:
+                        plot_one_box(tmp_sani, im0, label="sani = O", color=colors(int(200), True),
+                                     line_thickness=line_thickness)
+                    else:
+                        plot_one_box(tmp_sani, im0, label="sani = X", color=colors(int(200), True),
+                                     line_thickness=line_thickness)
+                    if check_temp:
+                        plot_one_box(tmp_temp, im0, label="temp = O", color=colors(int(200), True),
+                                     line_thickness=line_thickness)
+                    else:
+                        plot_one_box(tmp_temp, im0, label="temp = X", color=colors(int(200), True),
+                                     line_thickness=line_thickness)
+                    if check_qrcd:
+                        plot_one_box(tmp_qrcd, im0, label="qrcd = O", color=colors(int(200), True),
+                                     line_thickness=line_thickness)
+                    else:
+                        plot_one_box(tmp_qrcd, im0, label="qrcd = X", color=colors(int(200), True),
+                                     line_thickness=line_thickness)
+
+                    if temp == deepcall_check:
+                        deepcall_check[0] = 0
+                        deepcall_check[1] = 0
+                        deepcall_check[2] = 0
+                        deepcall_check[3] = 0
+                    # 우리가 추가한 코드 끝
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
