@@ -25,8 +25,6 @@ from tkinter import messagebox as msg
 def sound():
     winsound.PlaySound('siren.wav', winsound.SND_FILENAME | winsound.SND_PURGE)
 
-
-
 def check(xyxy, xyxytemp):
     if xyxy[0] - 10 > xyxytemp[2]:
         return False
@@ -111,8 +109,8 @@ def qr_pos_check(xyxy):
         return True
 
 
-def check_Head_Cross(xyxy, comp):
-    if comp + 10 > xyxy[0] > comp - 10:
+def check_Cross(x, comp):
+    if comp + 10 > x > comp - 10:
         return True
     else:
         return False
@@ -132,6 +130,9 @@ temp_pos = [960, 280, 1040, 385]
 qr_pos = [430, 270, 520, 370]
 # ---------------텍스트박스 위치-------------------#
 deepcall_check = [0, 0, 0, 0]  # 객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
+detected_sani_count = [0] # sani의 검출 횟수를 담는 변수
+detected_temp_count = [0] # temp의 검출 횟수를 담는 변수
+detected_qr_count = [0] # qr의 검출 횟수를 담는 변수
 
 
 @torch.no_grad()
@@ -163,6 +164,26 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
            alarm=True,
            message=True,
            ):
+    check_sani = False # BBOX 겹침이 발생했을 때, sani의 bbox를 custom-Layer로 보내서, 손소독제를 짜는 상황의 sani인지 체크하는 변수
+    check_temp = False # BBOX 겹침이 발생했을 때, temp의 bbox를 custom-Layer로 보내서, 열을 재고있는 temp인지 체크하는 변수
+    check_qrcd = False # BBOX 겹침이 발생했을 때, qrcd의 bbox를 custom-Layer로 보내서, qr검사를 하고 있는 qr인지 체크하는 변수
+    start_x = 0 # 사람이 입장하고, 마스크착용 검사를 하는 x좌표
+    sani_x = 0 # sani_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
+    sani_x_tmp1 = 0 # sani_x를 결정하기위해 잠깐 이용하는 값
+    sani_x_tmp2 = 0 # sani_x를 결정하기위해 잠깐 이용하는 값
+    temp_x = 0 # temp_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
+    temp_x_tmp1 = 0 # temp_x를 결정하기위해 잠깐 이용하는 값
+    temp_x_tmp2 = 0 # temp_x를 결정하기위해 잠깐 이용하는 값
+    qrcd_x = 0 # qrcd_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
+    qrcd_x_tmp1 = 0 # qrcd_x를 결정하기위해 잠깐 이용하는 값
+    qrcd_x_tmp2 = 0 # qrcd_x를 결정하기위해 잠깐 이용하는 값
+    key = False # False = 설정모드, True = 검출모드
+    init_check=[0,0,0] #3객체가 적당한 위치에 배치되었는지 확인하는 용도, [1,1,1]이 저장된다면 key를 true로 바꾸고 검출모드 시작
+    init_check = [0, 0, 0]  # 3객체가 적당한 위치에 배치되었는지 확인하는 용도, [1,1,1]이 저장된다면 key를 true로 바꾸고 검출모드 시작
+    sani_lock = False # sani의 검출이 sani_x 주변에서 딱 1번만 실행하도록 하는 용도
+    temp_lock = False # temp의 검출이 temp_x 주변에서 딱 1번만 실행하도록 하는 용도
+    qr_lock = False # qr의 검출이 qr 주변에서 딱 1번만 실행하도록 하는 용도
+    person_count = 0
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
@@ -212,23 +233,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
         # Remove regular files, ignore directories
         for filename in filenames:
             os.unlink(os.path.join(dirpath, filename))
-    check_sani = False
-    check_temp = False
-    check_qrcd = False
-    start_x = 0
-    sani_x = 0
-    sani_x_tmp1 = 0
-    sani_x_tmp2 = 0
-    temp_x = 0
-    temp_x_tmp1 = 0
-    temp_x_tmp2 = 0
-    qrcd_x = 0
-    qrcd_x_tmp1 = 0
-    qrcd_x_tmp2 = 0
-    key = False
-    init_check=[0,0,0] #3객체가 적당한 위치에 배치되었는지 확인하는 용도, [1,1,1]이 저장된다면 key를 true로 바꾸고 검출모드 시작
-    init_check = [0, 0, 0]  # 3객체가 적당한 위치에 배치되었는지 확인하는 용도, [1,1,1]이 저장된다면 key를 true로 바꾸고 검출모드 시작
-    person_count = 0
     # Run inference
     if device.type != 'cpu':
         model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
@@ -279,7 +283,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                 else:
                     key = True
 
-                for *xyxy, conf, cls in reversed(det):  # 1frame
+                for *xyxy, conf, cls in reversed(det):  # reversed(det) = 1box
                     if cls.item() == 2.0 and sani_pos_check(xyxy):
                         init_check[0] = 1
                     if cls.item() == 3.0 and temp_pos_check(xyxy):
@@ -343,6 +347,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                             if alarm:
                                                 th1 = Thread(target=sound)
                                                 th1.start()
+                                            deepcall_check[3] = 0    
                                     else:
                                         plot_one_box(tmp, im0, label="check = mask", color=colors(int(cls), True),
                                                      line_thickness=line_thickness)
@@ -366,6 +371,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                 deepcall_check[0] = deepcall_check[0] + 1
                                                 if deepcall_check[0] == 5:
                                                     check_sani = True
+                                                    deepcall_check[0] = 0
                                     elif cls.item() == 1.0 and clstmp.item() == 3.0:
                                         x1 = xyxytmp[0]
                                         x2 = xyxytmp[2]
@@ -380,8 +386,9 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                              color=colors(int(cls), True),
                                                              line_thickness=line_thickness)
                                                 deepcall_check[1] = deepcall_check[1] + 1
-                                                if deepcall_check[1] == 10:
+                                                if deepcall_check[1] == 5:
                                                     check_temp = True
+                                                    deepcall_check[1] = 0
                                     elif cls.item() == 0.0 and clstmp.item() == 4.0:
                                         x1 = xyxytmp[0]
                                         x2 = xyxytmp[2]
@@ -396,38 +403,55 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                              color=colors(int(cls), True),
                                                              line_thickness=line_thickness)
                                                 deepcall_check[2] = deepcall_check[2] + 1
-                                                if deepcall_check[2] == 10:
+                                                if deepcall_check[2] == 5:
                                                     check_qrcd = True
+                                                    deepcall_check[2] = 0
 
                         if cls.item() == 1.0:
-                            if check_Head_Cross(xyxy, start_x):
+                            if check_Cross(xyxy[0], start_x):
                                 check_sani = False
 
-                            if check_Head_Cross(xyxy, sani_x):
+                            if check_Cross(xyxy[0], sani_x):
                                 check_temp = False
-                                if not check_sani:
+                                if check_sani == False and sani_lock == False:
                                     plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
                                                  line_thickness=line_thickness)
+                                    detected_sani_count[0] = detected_sani_count[0] + 1              
                                     if alarm:
                                         th1 = Thread(target=sound)
                                         th1.start()
+                                    sani_lock = True    
 
-                            if check_Head_Cross(xyxy, temp_x):
+                            if check_Cross(xyxy[2], sani_x):
+                                sani_lock = False
+
+                            if check_Cross(xyxy[0], temp_x):
                                 check_qrcd = False
-                                if not check_temp:
+                                if check_temp == False and temp_lock == False:
                                     plot_one_box(siren, im0, label="Not temp!!!", color=colors(int(200), True),
                                                  line_thickness=line_thickness)
+                                    detected_temp_count[0] = detected_temp_count[0] + 1             
                                     if alarm:
                                         th1 = Thread(target=sound)
                                         th1.start()
+                                        temp_lock = True
 
-                            if check_Head_Cross(xyxy, qrcd_x):
-                                if not check_qrcd:
+                            if check_Cross(xyxy[2], temp_x):
+                                temp_lock = False
+                            
+                            if check_Cross(xyxy[0], qrcd_x):
+                                if check_qrcd == False and qr_lock == False:
                                     plot_one_box(siren, im0, label="Not qrcd!!!", color=colors(int(200), True),
                                                  line_thickness=line_thickness)
+                                    detected_qr_count[0] = detected_qr_count[0] + 1
                                     if alarm:
                                         th1 = Thread(target=sound)
                                         th1.start()
+                                        qr_lock = True
+                            if check_Cross(xyxy[2], qrcd_x):
+                                qr_lock = False
+                            
+                                        
 
                     else:  # key=true로 설정되기 이전에 보여지는 것들입니다.
                         plot_one_box(center, im0, label="SETTING.....", color=colors(int(0), True),
@@ -438,7 +462,14 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                      line_thickness=line_thickness)
                         plot_one_box(qr_pos, im0, label="Place QR", color=colors(255, True),
                                      line_thickness=line_thickness)
-
+                if key: # key=true로 설정된 이후에 보여지는 것들입니다.
+                    plot_one_box(tmp_sani, im0, label="sani_detect = %d" % detected_sani_count[0], color=colors(int(200), True),
+                                    line_thickness=line_thickness)
+                    plot_one_box(tmp_temp, im0, label="temp_detect = %d" % detected_temp_count[0], color=colors(int(200), True),
+                                    line_thickness=line_thickness)
+                    plot_one_box(tmp_qrcd, im0, label="qrcd_detect = %d" % detected_qr_count[0], color=colors(int(200), True),
+                                    line_thickness=line_thickness)
+                #여기까지가 우리가 수정한 부분입니다.
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
