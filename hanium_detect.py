@@ -452,18 +452,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                         qr_lock = True
                             if check_Cross(xyxy[2], qrcd_x):
                                 qr_lock = False
-                            
-                                        
-
-                    else:  # key=true로 설정되기 이전에 보여지는 것들입니다.
-                        plot_one_box(center, im0, label="SETTING.....", color=colors(int(0), True),
-                                     line_thickness=line_thickness)
-                        plot_one_box(sani_pos, im0, label="Place Sani", color=colors(0, True),
-                                     line_thickness=line_thickness)
-                        plot_one_box(temp_pos, im0, label="Place Temp", color=colors(127, True),
-                                     line_thickness=line_thickness)
-                        plot_one_box(qr_pos, im0, label="Place QR", color=colors(255, True),
-                                     line_thickness=line_thickness)
                 if key: # key=true로 설정된 이후에 보여지는 것들입니다.
                     plot_one_box(tmp_mask, im0, label="mask_detect = %d" % detected_mask_count[0], color=colors(int(200), True),
                                     line_thickness=line_thickness)
@@ -479,6 +467,15 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
             print(f'{s}Done. ({t2 - t1:.3f}s)')
             plot_one_box(exit, im0, label="EXIT : Q", color=colors(int(200), True),
                          line_thickness=line_thickness)
+            if key == False:
+                plot_one_box(center, im0, label="SETTING.....", color=colors(int(0), True),
+                                line_thickness=line_thickness)
+                plot_one_box(sani_pos, im0, label="Place Sani", color=colors(0, True),
+                                line_thickness=line_thickness)
+                plot_one_box(temp_pos, im0, label="Place Temp", color=colors(127, True),
+                                line_thickness=line_thickness)
+                plot_one_box(qr_pos, im0, label="Place QR", color=colors(255, True),
+                                line_thickness=line_thickness)             
 
             # Stream results
             if view_img:
