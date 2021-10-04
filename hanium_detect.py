@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 import cv2
 import torch
+from torch.autograd.grad_mode import F
 import torch.backends.cudnn as cudnn
 import os
 import winsound
@@ -20,10 +21,11 @@ from utils.torch_utils import select_device, load_classifier, time_synchronized
 from learning import deepcall
 from threading import Thread
 from tkinter import messagebox as msg
+from siren import call_siren
 
 
 def sound():
-    winsound.PlaySound('siren.wav', winsound.SND_FILENAME | winsound.SND_PURGE)
+    call_siren()
 
 def check(xyxy, xyxytemp):
     if xyxy[0] - 10 > xyxytemp[2]:
@@ -118,12 +120,12 @@ def check_Cross(x, comp):
 
 # --------------텍스트박스 위치--------------------#
 center = [960, 100, 960, 100]
-exit = [500, 500, 500, 500]
 tmp = [100, 100, 100, 100]
-tmp_sani = [200, 300, 200, 300]
-tmp_temp = [200, 400, 200, 400]
-tmp_qrcd = [200, 500, 200, 500]
-tmp_mask = [200, 600, 200, 600]
+tmp_mask = [1600, 50, 1600, 50]
+tmp_sani = [1600, 100, 1600, 100]
+tmp_temp = [1600, 150, 1600, 150]
+tmp_qrcd = [1600, 200, 1600, 200]
+exit = [1600, 250, 1600, 250]
 siren = [200, 700, 200, 700]
 sani_pos = [1560, 380, 1640, 500]
 temp_pos = [960, 280, 1040, 385]
@@ -133,6 +135,7 @@ deepcall_check = [0, 0, 0, 0]  # 객체 검출이 특정횟수 이상 연속으�
 detected_sani_count = [0] # sani의 검출 횟수를 담는 변수
 detected_temp_count = [0] # temp의 검출 횟수를 담는 변수
 detected_qr_count = [0] # qr의 검출 횟수를 담는 변수
+detected_mask_count = [0] # mask의 검출 횟수를 담는 변수
 
 
 @torch.no_grad()
@@ -342,7 +345,8 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                      line_thickness=line_thickness)
                                         deepcall_check[3] = deepcall_check[3] + 1
                                         if deepcall_check[3] == 5:
-                                            plot_one_box(siren, im0, label="Not Mask!!!", color=colors(int(200), True),
+                                            detected_mask_count[0] = detected_mask_count[0] + 1 
+                                            plot_one_box(siren, im0, label="Not Mask!!s!", color=colors(int(200), True),
                                                          line_thickness=line_thickness)
                                             if alarm:
                                                 th1 = Thread(target=sound)
@@ -463,6 +467,8 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                         plot_one_box(qr_pos, im0, label="Place QR", color=colors(255, True),
                                      line_thickness=line_thickness)
                 if key: # key=true로 설정된 이후에 보여지는 것들입니다.
+                    plot_one_box(tmp_mask, im0, label="mask_detect = %d" % detected_mask_count[0], color=colors(int(200), True),
+                                    line_thickness=line_thickness)
                     plot_one_box(tmp_sani, im0, label="sani_detect = %d" % detected_sani_count[0], color=colors(int(200), True),
                                     line_thickness=line_thickness)
                     plot_one_box(tmp_temp, im0, label="temp_detect = %d" % detected_temp_count[0], color=colors(int(200), True),
