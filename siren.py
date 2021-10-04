@@ -21,9 +21,9 @@ def call_siren():
     # write the data
     dev.write(end_point, buffer)
     time.sleep(2)
-    buffer[2] = 0
-    buffer[3] = 0
-    buffer[4] = 0   
-    buffer[7] = 0
+    buffer[2] = 0 #빨간등
+    buffer[3] = 0 #노란등
+    buffer[4] = 0 #초록색등 
+    buffer[7] = 0 #사운드
     dev.write(end_point, buffer)
     dev.reset()

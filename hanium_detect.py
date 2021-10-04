@@ -344,8 +344,8 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                         deepcall_check[3] = deepcall_check[3] + 1
                                         if deepcall_check[3] == 5:
                                             detected_mask_count[0] = detected_mask_count[0] + 1 
-                                            plot_one_box(siren, im0, label="Not Mask!!s!", color=colors(int(200), True),
-                                                         line_thickness=line_thickness)
+                                            plot_one_box(siren, im0, label="Not Mask!!!", color=colors(int(200), True),
+                                                         line_thickness=line_thickness)                                            
                                             if alarm:
                                                 th1 = Thread(target=call_siren)
                                                 th1.start()
