@@ -12,6 +12,8 @@ import torch.backends.cudnn as cudnn
 import os
 import winsound
 import threading
+import usb.core
+import usb.util
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
@@ -23,9 +25,6 @@ from threading import Thread
 from tkinter import messagebox as msg
 from siren import call_siren
 
-
-def sound():
-    call_siren()
 
 def check(xyxy, xyxytemp):
     if xyxy[0] - 10 > xyxytemp[2]:
@@ -190,7 +189,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
-
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
@@ -349,7 +347,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                             plot_one_box(siren, im0, label="Not Mask!!s!", color=colors(int(200), True),
                                                          line_thickness=line_thickness)
                                             if alarm:
-                                                th1 = Thread(target=sound)
+                                                th1 = Thread(target=call_siren)
                                                 th1.start()
                                             deepcall_check[3] = 0    
                                     else:
@@ -422,7 +420,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                  line_thickness=line_thickness)
                                     detected_sani_count[0] = detected_sani_count[0] + 1              
                                     if alarm:
-                                        th1 = Thread(target=sound)
+                                        th1 = Thread(target=call_siren)
                                         th1.start()
                                     sani_lock = True    
 
@@ -436,7 +434,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                  line_thickness=line_thickness)
                                     detected_temp_count[0] = detected_temp_count[0] + 1             
                                     if alarm:
-                                        th1 = Thread(target=sound)
+                                        th1 = Thread(target=call_siren)
                                         th1.start()
                                         temp_lock = True
 
@@ -449,7 +447,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                  line_thickness=line_thickness)
                                     detected_qr_count[0] = detected_qr_count[0] + 1
                                     if alarm:
-                                        th1 = Thread(target=sound)
+                                        th1 = Thread(target=call_siren)
                                         th1.start()
                                         qr_lock = True
                             if check_Cross(xyxy[2], qrcd_x):
