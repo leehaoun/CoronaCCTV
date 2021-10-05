@@ -1,29 +1,23 @@
 # 9월 6일 그 전에 구현된 경보, 메시지 기능 UI 연동 구현 위해서 다시 추가, UI 관련으로 detect 파라미터 추가
 
 import argparse
-from math import fabs
-from re import X
+import os
 import time
 from pathlib import Path
+from threading import Thread
+
 import cv2
 import torch
-from torch.autograd.grad_mode import F
 import torch.backends.cudnn as cudnn
-import os
-import winsound
-import threading
-import usb.core
-import usb.util
+
+from learning import deepcall
 from models.experimental import attempt_load
+#from siren import call_siren
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
     scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path, save_one_box
 from utils.plots import colors, plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
-from learning import deepcall
-from threading import Thread
-from tkinter import messagebox as msg
-from siren import call_siren
 
 
 def check(xyxy, xyxytemp):
@@ -138,7 +132,7 @@ detected_mask_count = [0] # mask의 검출 횟수를 담는 변수
 
 
 @torch.no_grad()
-def detect(weights='yolov5s.pt',  # model.pt path(s)
+def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
            source='data/images',  # file/dir/URL/glob, 0 for webcam
            w_width=1280,
            w_height=720,
@@ -346,9 +340,9 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                             detected_mask_count[0] = detected_mask_count[0] + 1 
                                             plot_one_box(siren, im0, label="Not Mask!!!", color=colors(int(200), True),
                                                          line_thickness=line_thickness)                                            
-                                            if alarm:
-                                                th1 = Thread(target=call_siren)
-                                                th1.start()
+                                            #if alarm:
+                                                #th1 = Thread(target=call_siren)
+                                                #th1.start()
                                             deepcall_check[3] = 0    
                                     else:
                                         plot_one_box(tmp, im0, label="check = mask", color=colors(int(cls), True),
@@ -420,9 +414,9 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                  line_thickness=line_thickness)
                                     detected_sani_count[0] = detected_sani_count[0] + 1              
                                     if alarm:
-                                        th1 = Thread(target=call_siren)
-                                        th1.start()
-                                    sani_lock = True    
+                                        #th1 = Thread(target=call_siren)
+                                        #th1.start()
+                                        sani_lock = True
 
                             if check_Cross(xyxy[2], sani_x):
                                 sani_lock = False
@@ -434,8 +428,8 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                  line_thickness=line_thickness)
                                     detected_temp_count[0] = detected_temp_count[0] + 1             
                                     if alarm:
-                                        th1 = Thread(target=call_siren)
-                                        th1.start()
+                                        #th1 = Thread(target=call_siren)
+                                        #th1.start()
                                         temp_lock = True
 
                             if check_Cross(xyxy[2], temp_x):
@@ -447,8 +441,8 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                  line_thickness=line_thickness)
                                     detected_qr_count[0] = detected_qr_count[0] + 1
                                     if alarm:
-                                        th1 = Thread(target=call_siren)
-                                        th1.start()
+                                        #th1 = Thread(target=call_siren)
+                                        #th1.start()
                                         qr_lock = True
                             if check_Cross(xyxy[2], qrcd_x):
                                 qr_lock = False
