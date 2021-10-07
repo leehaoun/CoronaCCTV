@@ -1,5 +1,6 @@
 # 9월 6일 그 전에 구현된 경보, 메시지 기능 UI 연동 구현 위해서 다시 추가, UI 관련으로 detect 파라미터 추가
 
+import datetime
 import argparse
 from math import fabs
 from re import X
@@ -14,6 +15,7 @@ import winsound
 import threading
 import usb.core
 import usb.util
+import pymysql
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
@@ -94,6 +96,13 @@ detected_temp_count = [0] # temp의 검출 횟수를 담는 변수
 detected_qr_count = [0] # qr의 검출 횟수를 담는 변수
 detected_mask_count = [0] # mask의 검출 횟수를 담는 변수
 
+juso_db = pymysql.connect(
+    user='root',
+    passwd='rlaeodud12!1',
+    host='127.0.0.1',
+    db='corona',
+    charset='utf8'
+)
 @torch.no_grad()
 def detect(weights='yolov5s.pt',  # model.pt path(s)
            source='data/images',  # file/dir/URL/glob, 0 for webcam
@@ -170,6 +179,21 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
         mode_check.append(5.0)
 
 
+    now = datetime.datetime.now()
+    print(" '%s' ", now)
+
+    cursor = juso_db.cursor(pymysql.cursors.DictCursor)
+
+    db_check = "SHOW TABLES LIKE 'log';"
+    cursor.execute(db_check)
+    db_check_result = cursor.fetchall()
+    if len(db_check_result) == 0:
+        cursor.execute("""CREATE TABLE log(
+        id INT(255) NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+        time DATETIME, 
+        check_act VARCHAR(255)
+        );""")
+        cursor.fetchall()
 
     check_sani = False # BBOX 겹침이 발생했을 때, sani의 bbox를 custom-Layer로 보내서, 손소독제를 짜는 상황의 sani인지 체크하는 변수
     check_temp = False # BBOX 겹침이 발생했을 때, temp의 bbox를 custom-Layer로 보내서, 열을 재고있는 temp인지 체크하는 변수
@@ -387,11 +411,21 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                             if deepcall_check[3] == 5:
                                                 detected_mask_count[0] = detected_mask_count[0] + 1 
                                                 plot_one_box(siren, im0, label="Not Mask!!!", color=colors(int(200), True),
-                                                            line_thickness=line_thickness)                                            
+                                                            line_thickness=line_thickness)
+                                                now = datetime.datetime.now()
+                                                now = now.strftime('%Y-%m-%d %H:%M:%S')
+                                                cursor.execute("""
+                                                 INSERT INTO log 
+                                                 (time, check_act)
+                                                 VALUES (%s,0)
+                                                 """, now)
+                                                print("dbsave!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                                                cursor.fetchall()
+                                                juso_db.commit()
                                                 if alarm:
                                                     th1 = Thread(target=call_siren)
                                                     th1.start()
-                                                deepcall_check[3] = 0    
+                                                deepcall_check[3] = 0
                                         else:
                                             plot_one_box(tmp, im0, label="check = mask", color=colors(int(cls), True),
                                                         line_thickness=line_thickness)
@@ -478,7 +512,16 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                     if check_sani == False and sani_lock[1] == False:
                                         plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
                                                     line_thickness=line_thickness)
-                                        detected_sani_count[0] = detected_sani_count[0] + 1              
+                                        detected_sani_count[0] = detected_sani_count[0] + 1
+                                        now = datetime.datetime.now()
+                                        now = now.strftime('%Y-%m-%d %H:%M:%S')
+                                        cursor.execute("""
+                                         INSERT INTO log 
+                                         (time, check_act)
+                                         VALUES (%s,1)
+                                         """, now)
+                                        cursor.fetchall()
+                                        juso_db.commit()
                                         if alarm:
                                             th1 = Thread(target=call_siren)
                                             th1.start()
@@ -489,7 +532,16 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                     if check_temp == False and temp_lock[1] == False:
                                         plot_one_box(siren, im0, label="Not temp!!!", color=colors(int(200), True),
                                                     line_thickness=line_thickness)
-                                        detected_temp_count[0] = detected_temp_count[0] + 1             
+                                        detected_temp_count[0] = detected_temp_count[0] + 1
+                                        now = datetime.datetime.now()
+                                        now = now.strftime('%Y-%m-%d %H:%M:%S')
+                                        cursor.execute("""
+                                          INSERT INTO log 
+                                          (time, check_act)
+                                          VALUES (%s,2)
+                                          """, now)
+                                        cursor.fetchall()
+                                        juso_db.commit()
                                         if alarm:
                                             th1 = Thread(target=call_siren)
                                             th1.start()
@@ -501,6 +553,15 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                         plot_one_box(siren, im0, label="Not qrcd!!!", color=colors(int(200), True),
                                                     line_thickness=line_thickness)
                                         detected_qr_count[0] = detected_qr_count[0] + 1
+                                        now = datetime.datetime.now()
+                                        now = now.strftime('%Y-%m-%d %H:%M:%S')
+                                        cursor.execute("""
+                                         INSERT INTO log 
+                                         (time, check_act)
+                                         VALUES (%s,3)
+                                         """, now)
+                                        cursor.fetchall()
+                                        juso_db.commit()
                                         if alarm:
                                             th1 = Thread(target=call_siren)
                                             th1.start()
