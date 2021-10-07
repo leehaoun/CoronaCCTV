@@ -37,7 +37,7 @@ def check(xyxy, xyxytemp):
         return False
     else:
         return True
-def sani_pos_check(xyxy):
+def sani_pos_check(xyxy, sani_pos):
     if xyxy[0]> sani_pos[2]:
         return False
     elif xyxy[2] < sani_pos[0]:
@@ -48,7 +48,7 @@ def sani_pos_check(xyxy):
         return False
     else:
         return True
-def temp_pos_check(xyxy):
+def temp_pos_check(xyxy, temp_pos):
     if xyxy[0]> temp_pos[2]:
         return False
     elif xyxy[2] < temp_pos[0]:
@@ -59,46 +59,8 @@ def temp_pos_check(xyxy):
         return False
     else:
         return True
-def qr_pos_check(xyxy):
+def qr_pos_check(xyxy, qr_pos):
     if xyxy[0]> qr_pos[2]:
-        return False
-    elif xyxy[2] < qr_pos[0]:
-        return False
-    elif xyxy[3] < qr_pos[1]:
-        return False
-    elif xyxy[1] > qr_pos[3]:
-        return False
-    else:
-        return True
-
-def sani_pos_check(xyxy):
-    if xyxy[0] > sani_pos[2]:
-        return False
-    elif xyxy[2] < sani_pos[0]:
-        return False
-    elif xyxy[3] < sani_pos[1]:
-        return False
-    elif xyxy[1] > sani_pos[3]:
-        return False
-    else:
-        return True
-
-
-def temp_pos_check(xyxy):
-    if xyxy[0] > temp_pos[2]:
-        return False
-    elif xyxy[2] < temp_pos[0]:
-        return False
-    elif xyxy[3] < temp_pos[1]:
-        return False
-    elif xyxy[1] > temp_pos[3]:
-        return False
-    else:
-        return True
-
-
-def qr_pos_check(xyxy):
-    if xyxy[0] > qr_pos[2]:
         return False
     elif xyxy[2] < qr_pos[0]:
         return False
@@ -125,9 +87,6 @@ tmp_temp = [1600, 150, 1600, 150]
 tmp_qrcd = [1600, 200, 1600, 200]
 exit = [1600, 250, 1600, 250]
 siren = [200, 700, 200, 700]
-sani_pos = [0,0,0,0]
-temp_pos = [0,0,0,0]
-qr_pos = [0,0,0,0]
 # ---------------텍스트박스 위치-------------------#
 deepcall_check = [0, 0, 0, 0]  # 객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
 detected_sani_count = [0] # sani의 검출 횟수를 담는 변수
@@ -328,19 +287,48 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                     n = (det[:, -1] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
                 # Write results
-                check_person = False
-                if init_check != [1, 1, 1]:
-                    init_check = [0, 0, 0]
-                else:
-                    key = True
-                
+                if mod == 0:
+                    if init_check != [1, 1, 1]:
+                        init_check = [0, 0, 0]
+                    else:
+                        key = True
+                elif mod == 1:
+                    if init_check != [0, 1, 1]:
+                        init_check = [0, 0, 0]
+                    else:
+                        key = True
+                elif mod == 2:
+                    if init_check != [1, 0, 1]:
+                        init_check = [0, 0, 0]
+                    else:
+                        key = True
+                elif mod == 3:
+                    if init_check != [1, 1, 0]:
+                        init_check = [0, 0, 0]
+                    else:
+                        key = True
+                elif mod == 4:
+                    if init_check != [1, 0, 0]:
+                        init_check = [0, 0, 0]
+                    else:
+                        key = True
+                elif mod == 5:
+                    if init_check != [0, 1, 0]:
+                        init_check = [0, 0, 0]
+                    else:
+                        key = True
+                elif mod == 6:
+                    if init_check != [0, 0, 1]:
+                        init_check = [0, 0, 0]
+                    else:
+                        key = True
                 for *xyxy, conf, cls in reversed(det):  # reversed(det) = 1box, cls 0.0 = head , 1.0 = hands, 2.0 = sanitizer, 3.0 = temperature, 4.0 = qrcd 
                     if cls.item() in mode_check:
-                        if cls.item() == 2.0 and sani_pos_check(xyxy):
+                        if cls.item() == 2.0 and sani_pos_check(xyxy, sani_pos):
                             init_check[0] = 1
-                        if cls.item() == 3.0 and temp_pos_check(xyxy):
+                        if cls.item() == 3.0 and temp_pos_check(xyxy, temp_pos):
                             init_check[1] = 1
-                        if cls.item() == 4.0 and qr_pos_check(xyxy):
+                        if cls.item() == 4.0 and qr_pos_check(xyxy, qr_pos):
                             init_check[2] = 1
                         if save_txt:  # Write to file
                             xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
@@ -467,15 +455,15 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                 if check_Cross(xyxy[0], sani_x_start) and sani_lock[0] == False:
                                     check_sani = False
                                     sani_lock[0] = True
-                                    threading.Timer(20, sani_lock_free).start()
+                                    threading.Timer(10, sani_lock_free).start()
                                 if check_Cross(xyxy[0], temp_x_start) and temp_lock[0] == False:
                                     check_temp = False
                                     temp_lock[0] = True
-                                    threading.Timer(20, temp_lock_free).start()
+                                    threading.Timer(10, temp_lock_free).start()
                                 if check_Cross(xyxy[0], qrcd_x_start) and qr_lock[0] == False:      
                                     check_qrcd= False
                                     qr_lock[0] = True
-                                    threading.Timer(20, qr_lock_free).start()
+                                    threading.Timer(10, qr_lock_free).start()
 
                                 if check_Cross(xyxy[2], sani_x_end) and 2.0 in mode_check:
                                     sani_lock[0] = False
@@ -495,7 +483,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                             th1 = Thread(target=call_siren)
                                             th1.start()
                                         sani_lock[1] = True
-                                        threading.Timer(30, sani_lock_free).start()    
+                                        threading.Timer(10, sani_lock_free).start()    
 
                                 if check_Cross(xyxy[0], temp_x_end) and 3.0 in mode_check:
                                     if check_temp == False and temp_lock[1] == False:
@@ -506,7 +494,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                             th1 = Thread(target=call_siren)
                                             th1.start()
                                         temp_lock[1] = True
-                                        threading.Timer(30, temp_lock_free).start()
+                                        threading.Timer(10, temp_lock_free).start()
                                 
                                 if check_Cross(xyxy[0], qrcd_x_end) and 4.0 in mode_check:
                                     if check_qrcd == False and qr_lock[1] == False:
@@ -517,7 +505,7 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                             th1 = Thread(target=call_siren)
                                             th1.start()
                                         qr_lock[1] = True
-                                        threading.Timer(30, qr_lock_free).start()
+                                        threading.Timer(10, qr_lock_free).start()
                     if key: # key=true로 설정된 이후에 보여지는 것들입니다.
                         if 5.0 in mode_check:
                             plot_one_box(tmp_mask, im0, label="mask_detect = %d" % detected_mask_count[0], color=colors(int(200), True),
