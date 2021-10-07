@@ -116,7 +116,6 @@ def check_Cross(x, comp):
     else:
         return False
 
-
 # --------------텍스트박스 위치--------------------#
 center = [960, 100, 960, 100]
 tmp = [100, 100, 100, 100]
@@ -126,16 +125,15 @@ tmp_temp = [1600, 150, 1600, 150]
 tmp_qrcd = [1600, 200, 1600, 200]
 exit = [1600, 250, 1600, 250]
 siren = [200, 700, 200, 700]
-sani_pos = [1560, 380, 1640, 500]
-temp_pos = [960, 280, 1040, 385]
-qr_pos = [430, 270, 520, 370]
+sani_pos = [0,0,0,0]
+temp_pos = [0,0,0,0]
+qr_pos = [0,0,0,0]
 # ---------------텍스트박스 위치-------------------#
 deepcall_check = [0, 0, 0, 0]  # 객체 검출이 특정횟수 이상 연속으로 검출되어야 사용했다고 판정하기 위해 사용
 detected_sani_count = [0] # sani의 검출 횟수를 담는 변수
 detected_temp_count = [0] # temp의 검출 횟수를 담는 변수
 detected_qr_count = [0] # qr의 검출 횟수를 담는 변수
 detected_mask_count = [0] # mask의 검출 횟수를 담는 변수
-mode_check = []
 
 @torch.no_grad()
 def detect(weights='yolov5s.pt',  # model.pt path(s)
@@ -165,34 +163,86 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
            half=False,  # use FP16 half-precision inference
            alarm=True,
            message=True,
+           mod=0
            ):
+    sani_pos = [1550, 380, 1650, 480]
+    temp_pos = [950, 270, 1050, 370]
+    qr_pos = [420, 260, 520, 360]
+    mode_check = []
+    if mod == 0:
+        mode_check.append(0.0)
+        mode_check.append(1.0)
+        mode_check.append(2.0)
+        mode_check.append(3.0)
+        mode_check.append(4.0)
+        mode_check.append(5.0)
+    elif mod == 1:
+        mode_check.append(0.0)
+        mode_check.append(1.0)
+        mode_check.append(3.0)
+        mode_check.append(4.0)
+        mode_check.append(5.0)
+    elif mod == 2:
+        mode_check.append(0.0)
+        mode_check.append(1.0)
+        mode_check.append(2.0)
+        mode_check.append(4.0)
+        mode_check.append(5.0)
+    elif mod == 3:
+        mode_check.append(0.0)
+        mode_check.append(1.0)
+        mode_check.append(2.0)
+        mode_check.append(3.0)
+        mode_check.append(5.0)
+    elif mod == 4:
+        mode_check.append(0.0)
+        mode_check.append(1.0)
+        mode_check.append(2.0)
+        mode_check.append(5.0)
+    elif mod == 5:
+        mode_check.append(0.0)
+        mode_check.append(1.0)
+        mode_check.append(3.0)
+        mode_check.append(5.0)
+    elif mod == 6:
+        mode_check.append(0.0)
+        mode_check.append(1.0)
+        mode_check.append(4.0)
+        mode_check.append(5.0)
+
+
+
     check_sani = False # BBOX 겹침이 발생했을 때, sani의 bbox를 custom-Layer로 보내서, 손소독제를 짜는 상황의 sani인지 체크하는 변수
     check_temp = False # BBOX 겹침이 발생했을 때, temp의 bbox를 custom-Layer로 보내서, 열을 재고있는 temp인지 체크하는 변수
     check_qrcd = False # BBOX 겹침이 발생했을 때, qrcd의 bbox를 custom-Layer로 보내서, qr검사를 하고 있는 qr인지 체크하는 변수
     start_x = 0 # 사람이 입장하고, 마스크착용 검사를 하는 x좌표
-    sani_x = 0 # sani_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
-    sani_x_tmp1 = 0 # sani_x를 결정하기위해 잠깐 이용하는 값
-    sani_x_tmp2 = 0 # sani_x를 결정하기위해 잠깐 이용하는 값
-    temp_x = 0 # temp_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
-    temp_x_tmp1 = 0 # temp_x를 결정하기위해 잠깐 이용하는 값
-    temp_x_tmp2 = 0 # temp_x를 결정하기위해 잠깐 이용하는 값
-    qrcd_x = 0 # qrcd_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
-    qrcd_x_tmp1 = 0 # qrcd_x를 결정하기위해 잠깐 이용하는 값
-    qrcd_x_tmp2 = 0 # qrcd_x를 결정하기위해 잠깐 이용하는 값
-    key = True# False = 설정모드, True = 검출모드
+    sani_x_start = 0
+    temp_x_start = 0
+    qrcd_x_start = 0
+    sani_x_end = 0 # sani_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
+    temp_x_end = 0 # temp_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
+    qrcd_x_end = 0 # qrcd_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
+    key = False# False = 설정모드, True = 검출모드
     init_check=[0,0,0] #3객체가 적당한 위치에 배치되었는지 확인하는 용도, [1,1,1]이 저장된다면 key를 true로 바꾸고 검출모드 시작
     init_check = [0, 0, 0]  # 3객체가 적당한 위치에 배치되었는지 확인하는 용도, [1,1,1]이 저장된다면 key를 true로 바꾸고 검출모드 시작
-    sani_lock = False # sani의 검출이 sani_x 주변에서 딱 1번만 실행하도록 하는 용도
-    temp_lock = False # temp의 검출이 temp_x 주변에서 딱 1번만 실행하도록 하는 용도
-    qr_lock = False # qr의 검출이 qr 주변에서 딱 1번만 실행하도록 하는 용도
-    person_count = 0
+    sani_lock = [False, False] # sani의 검출이 sani_x 주변에서 딱 1번만 실행하도록 하는 용도
+    temp_lock = [False, False] # temp의 검출이 temp_x 주변에서 딱 1번만 실행하도록 하는 용도
+    qr_lock = [False, False] # qr의 검출이 qr 주변에서 딱 1번만 실행하도록 하는 용도
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
     # Directories
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
-
+    def sani_lock_free():
+            sani_lock[0] = False
+            sani_lock[1] = False
+    def temp_lock_free():
+            temp_lock[0] = False
+            temp_lock[1] = False
+    def qr_lock_free():
+            qr_lock[0] = False
+            qr_lock[1] = False
     # Initialize
     set_logging()
     device = select_device(device)
@@ -283,13 +333,6 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                     init_check = [0, 0, 0]
                 else:
                     key = True
-
-                mode_check.append(0.0)
-                mode_check.append(1.0)
-                mode_check.append(2.0)
-                mode_check.append(3.0)
-                mode_check.append(4.0)
-                mode_check.append(5.0)
                 
                 for *xyxy, conf, cls in reversed(det):  # reversed(det) = 1box, cls 0.0 = head , 1.0 = hands, 2.0 = sanitizer, 3.0 = temperature, 4.0 = qrcd 
                     if cls.item() in mode_check:
@@ -315,22 +358,34 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                             plot_one_box(center, im0, label="ON DETECTING", color=colors(int(0), True),
                                         line_thickness=line_thickness)
                             if cls.item() == 2.0:
-                                sani_x = int(xyxy[0] - 100)
+                                sani_x_start = int(xyxy[0] + 150)
+                                sani_x_end = int(xyxy[0] - 150)
                             if cls.item() == 3.0:
-                                temp_x = int(xyxy[0] - 100)
+                                temp_x_start = int(xyxy[0] + 150)    
+                                temp_x_end = int(xyxy[0] - 150)
                             if cls.item() == 4.0:
-                                qrcd_x = int(xyxy[0] - 100)
+                                qrcd_x_start = int(xyxy[0] + 150)
+                                qrcd_x_end = int(xyxy[0] - 150)
                             start_x = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH)) - 100
 
                             cv2.line(im0, (start_x, 0), (start_x, 1000), (255, 255, 255), 1)
-                            cv2.line(im0, (qrcd_x, 0), (qrcd_x, 1000), (255, 0, 0), 1)  # blue
-                            cv2.line(im0, (temp_x, 0), (temp_x, 1000), (0, 255, 0), 1)  # green
-                            cv2.line(im0, (sani_x, 0), (sani_x, 1000), (0, 0, 255), 1)  # red
+                            cv2.line(im0, (sani_x_end, 0), (sani_x_end, 1000), (0, 0, 255), 1)  # red   
+                            cv2.line(im0, (temp_x_end, 0), (temp_x_end, 1000), (0, 255, 0), 1)  # green                                                     
+                            cv2.line(im0, (qrcd_x_end, 0), (qrcd_x_end, 1000), (255, 0, 0), 1)  # blue                           
+                            if(sani_lock[0] == False):
+                                cv2.line(im0, (sani_x_start, 0), (sani_x_start, 1000), (0, 0, 255), 1) # red
+                            
+                            if(temp_lock[0] == False):
+                                cv2.line(im0, (temp_x_start, 0), (temp_x_start, 1000), (0, 255, 0), 1)  # green 
 
+                            if(qr_lock[0] == False):
+                               cv2.line(im0, (qrcd_x_start, 0), (qrcd_x_start, 1000), (255, 0, 0), 1)  # blue
+                               
+                            
                             if cls.item() == 0.0 or cls.item() == 1.0:
                                 # check mask
                                 if cls.item() == 1.0:
-                                    if start_x > xyxy[0] > start_x - 50:
+                                    if start_x > xyxy[0] > start_x - 50 and 5.0 in mode_check:
                                         x1 = xyxy[0]
                                         x2 = xyxy[2]
                                         y1 = xyxy[1]
@@ -354,103 +409,115 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
                                                         line_thickness=line_thickness)
 
                                 for *xyxytmp, clstmp in reversed(det):
-                                    if clstmp.item() != 0.0 and clstmp.item() != 1.0 and check(xyxy,
-                                                                                            xyxytmp):  # cls(손, 얼굴) clstmp(손소독,qr,온도계)
-                                        if cls.item() == 0.0 and clstmp.item() == 2.0:
-                                            x1 = xyxytmp[0]
-                                            x2 = xyxytmp[2]
-                                            y1 = xyxytmp[1]
-                                            y2 = xyxytmp[3]
-                                            ry = (y2 - y1) / 8
-                                            img_trim = im0s[int(y1 - ry):int(y2), int(x1):int(x2)]
-                                            cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                            if len(os.listdir("./tmp/img/1")) != 0:
-                                                if deepcall() == 0:
-                                                    plot_one_box(tmp, im0, label="check = sanitizer",
-                                                                color=colors(int(cls), True),
-                                                                line_thickness=line_thickness)
-                                                    deepcall_check[0] = deepcall_check[0] + 1
-                                                    if deepcall_check[0] == 5:
-                                                        check_sani = True
-                                                        deepcall_check[0] = 0
-                                        elif cls.item() == 1.0 and clstmp.item() == 3.0:
-                                            x1 = xyxytmp[0]
-                                            x2 = xyxytmp[2]
-                                            y1 = xyxytmp[1]
-                                            y2 = xyxytmp[3]
-                                            rx = (x2 - x1) / 2
-                                            img_trim = im0s[int(y1):int(y2), int(x1 - rx):int(x2 + rx)]
-                                            cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                            if len(os.listdir("./tmp/img/1")) != 0:
-                                                if deepcall() == 2:
-                                                    plot_one_box(tmp, im0, label="check = temperatrue",
-                                                                color=colors(int(cls), True),
-                                                                line_thickness=line_thickness)
-                                                    deepcall_check[1] = deepcall_check[1] + 1
-                                                    if deepcall_check[1] == 5:
-                                                        check_temp = True
-                                                        deepcall_check[1] = 0
-                                        elif cls.item() == 0.0 and clstmp.item() == 4.0:
-                                            x1 = xyxytmp[0]
-                                            x2 = xyxytmp[2]
-                                            y1 = xyxytmp[1]
-                                            y2 = xyxytmp[3]
-                                            rx = (x2 - x1) / 2
-                                            img_trim = im0s[int(y1):int(y2), int(x1 - rx):int(x2 + rx)]
-                                            cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                            if len(os.listdir("./tmp/img/1")) != 0:
-                                                if deepcall() == 4:
-                                                    plot_one_box(tmp, im0, label="check = qrcode",
-                                                                color=colors(int(cls), True),
-                                                                line_thickness=line_thickness)
-                                                    deepcall_check[2] = deepcall_check[2] + 1
-                                                    if deepcall_check[2] == 5:
-                                                        check_qrcd = True
-                                                        deepcall_check[2] = 0
+                                    if clstmp.item() in mode_check:
+                                        if clstmp.item() != 0.0 and clstmp.item() != 1.0 and check(xyxy,xyxytmp):  # cls(손, 얼굴) clstmp(손소독,qr,온도계)
+                                            if cls.item() == 0.0 and clstmp.item() == 2.0:
+                                                x1 = xyxytmp[0]
+                                                x2 = xyxytmp[2]
+                                                y1 = xyxytmp[1]
+                                                y2 = xyxytmp[3]
+                                                ry = (y2 - y1) / 8
+                                                img_trim = im0s[int(y1 - ry):int(y2), int(x1):int(x2)]
+                                                cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
+                                                if len(os.listdir("./tmp/img/1")) != 0:
+                                                    if deepcall() == 0:
+                                                        plot_one_box(tmp, im0, label="check = sanitizer",
+                                                                    color=colors(int(cls), True),
+                                                                    line_thickness=line_thickness)
+                                                        deepcall_check[0] = deepcall_check[0] + 1
+                                                        if deepcall_check[0] == 5:
+                                                            check_sani = True
+                                                            deepcall_check[0] = 0
+                                            elif cls.item() == 1.0 and clstmp.item() == 3.0:
+                                                x1 = xyxytmp[0]
+                                                x2 = xyxytmp[2]
+                                                y1 = xyxytmp[1]
+                                                y2 = xyxytmp[3]
+                                                rx = (x2 - x1) / 2
+                                                img_trim = im0s[int(y1):int(y2), int(x1 - rx):int(x2 + rx)]
+                                                cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
+                                                if len(os.listdir("./tmp/img/1")) != 0:
+                                                    if deepcall() == 2:
+                                                        plot_one_box(tmp, im0, label="check = temperatrue",
+                                                                    color=colors(int(cls), True),
+                                                                    line_thickness=line_thickness)
+                                                        deepcall_check[1] = deepcall_check[1] + 1
+                                                        if deepcall_check[1] == 5:
+                                                            check_temp = True
+                                                            deepcall_check[1] = 0
+                                            elif cls.item() == 0.0 and clstmp.item() == 4.0:
+                                                x1 = xyxytmp[0]
+                                                x2 = xyxytmp[2]
+                                                y1 = xyxytmp[1]
+                                                y2 = xyxytmp[3]
+                                                rx = (x2 - x1) / 2
+                                                img_trim = im0s[int(y1):int(y2), int(x1 - rx):int(x2 + rx)]
+                                                cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
+                                                if len(os.listdir("./tmp/img/1")) != 0:
+                                                    if deepcall() == 4:
+                                                        plot_one_box(tmp, im0, label="check = qrcode",
+                                                                    color=colors(int(cls), True),
+                                                                    line_thickness=line_thickness)
+                                                        deepcall_check[2] = deepcall_check[2] + 1
+                                                        if deepcall_check[2] == 5:
+                                                            check_qrcd = True
+                                                            deepcall_check[2] = 0
 
                             if cls.item() == 1.0:
-                                if check_Cross(xyxy[0], start_x):
+                                if check_Cross(xyxy[0], sani_x_start) and sani_lock[0] == False:
                                     check_sani = False
-
-                                if check_Cross(xyxy[0], sani_x):
+                                    sani_lock[0] = True
+                                    threading.Timer(20, sani_lock_free).start()
+                                if check_Cross(xyxy[0], temp_x_start) and temp_lock[0] == False:
                                     check_temp = False
-                                    if check_sani == False and sani_lock == False:
+                                    temp_lock[0] = True
+                                    threading.Timer(20, temp_lock_free).start()
+                                if check_Cross(xyxy[0], qrcd_x_start) and qr_lock[0] == False:      
+                                    check_qrcd= False
+                                    qr_lock[0] = True
+                                    threading.Timer(20, qr_lock_free).start()
+
+                                if check_Cross(xyxy[2], sani_x_end) and 2.0 in mode_check:
+                                    sani_lock[0] = False
+                                    sani_lock[1] = False
+                                if check_Cross(xyxy[2], temp_x_end) and 3.0 in mode_check:
+                                    temp_lock[0] = False
+                                    temp_lock[1] = False
+                                if check_Cross(xyxy[2], qrcd_x_end) and 4.0 in mode_check:
+                                    qr_lock[0] = False
+                                    qr_lock[1] = False
+                                if check_Cross(xyxy[0], sani_x_end) and 2.0 in mode_check:
+                                    if check_sani == False and sani_lock[1] == False:
                                         plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
                                                     line_thickness=line_thickness)
                                         detected_sani_count[0] = detected_sani_count[0] + 1              
                                         if alarm:
                                             th1 = Thread(target=call_siren)
                                             th1.start()
-                                        sani_lock = True    
+                                        sani_lock[1] = True
+                                        threading.Timer(30, sani_lock_free).start()    
 
-                                if check_Cross(xyxy[2], sani_x):
-                                    sani_lock = False
-
-                                if check_Cross(xyxy[0], temp_x):
-                                    check_qrcd = False
-                                    if check_temp == False and temp_lock == False:
+                                if check_Cross(xyxy[0], temp_x_end) and 3.0 in mode_check:
+                                    if check_temp == False and temp_lock[1] == False:
                                         plot_one_box(siren, im0, label="Not temp!!!", color=colors(int(200), True),
                                                     line_thickness=line_thickness)
                                         detected_temp_count[0] = detected_temp_count[0] + 1             
                                         if alarm:
                                             th1 = Thread(target=call_siren)
                                             th1.start()
-                                            temp_lock = True
-
-                                if check_Cross(xyxy[2], temp_x):
-                                    temp_lock = False
+                                        temp_lock[1] = True
+                                        threading.Timer(30, temp_lock_free).start()
                                 
-                                if check_Cross(xyxy[0], qrcd_x):
-                                    if check_qrcd == False and qr_lock == False:
+                                if check_Cross(xyxy[0], qrcd_x_end) and 4.0 in mode_check:
+                                    if check_qrcd == False and qr_lock[1] == False:
                                         plot_one_box(siren, im0, label="Not qrcd!!!", color=colors(int(200), True),
                                                     line_thickness=line_thickness)
                                         detected_qr_count[0] = detected_qr_count[0] + 1
                                         if alarm:
                                             th1 = Thread(target=call_siren)
                                             th1.start()
-                                            qr_lock = True
-                                if check_Cross(xyxy[2], qrcd_x):
-                                    qr_lock = False
+                                        qr_lock[1] = True
+                                        threading.Timer(30, qr_lock_free).start()
                     if key: # key=true로 설정된 이후에 보여지는 것들입니다.
                         if 5.0 in mode_check:
                             plot_one_box(tmp_mask, im0, label="mask_detect = %d" % detected_mask_count[0], color=colors(int(200), True),
@@ -473,12 +540,15 @@ def detect(weights='yolov5s.pt',  # model.pt path(s)
             if key == False:
                 plot_one_box(center, im0, label="SETTING.....", color=colors(int(0), True),
                                 line_thickness=line_thickness)
-                plot_one_box(sani_pos, im0, label="Place Sani", color=colors(0, True),
-                                line_thickness=line_thickness)
-                plot_one_box(temp_pos, im0, label="Place Temp", color=colors(127, True),
-                                line_thickness=line_thickness)
-                plot_one_box(qr_pos, im0, label="Place QR", color=colors(255, True),
-                                line_thickness=line_thickness)             
+                if 2.0 in mode_check:
+                  plot_one_box(sani_pos, im0, label="Place Sani", color=colors(0, True),
+                                  line_thickness=line_thickness)
+                if 3.0 in mode_check:
+                    plot_one_box(temp_pos, im0, label="Place Temp", color=colors(127, True),
+                                    line_thickness=line_thickness)
+                if 4.0 in mode_check:
+                    plot_one_box(qr_pos, im0, label="Place QR", color=colors(255, True),
+                                    line_thickness=line_thickness)             
 
             # Stream results
             if view_img:
