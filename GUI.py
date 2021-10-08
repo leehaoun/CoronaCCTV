@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
         lcd_timer.timeout.connect(self.lcd_update)
         lcd_timer.start()
 
-        hanium_detect.detect(source='C:/Users/ACER/Desktop/random.mp4', w_width=int(win_size[0]), w_height=int(win_size[1]),
+        hanium_detect.detect(source='./data/videos/random.mp4', w_width=int(win_size[0]), w_height=int(win_size[1]),
                              device=device, conf_thres=float(self.rel) / 100, hide_labels=hide_labels)
 
     # lcd 설정
