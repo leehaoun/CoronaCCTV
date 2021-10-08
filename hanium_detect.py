@@ -2,13 +2,13 @@
 
 import datetime
 import argparse
-from math import fabs
-from re import X
+import os
 import time
 from pathlib import Path
+from threading import Thread
+
 import cv2
 import torch
-from torch.autograd.grad_mode import F
 import torch.backends.cudnn as cudnn
 import os
 import winsound
@@ -16,16 +16,15 @@ import threading
 import usb.core
 import usb.util
 import pymysql
+
+from learning import deepcall
 from models.experimental import attempt_load
+#from siren import call_siren
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
     scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path, save_one_box
 from utils.plots import colors, plot_one_box
 from utils.torch_utils import select_device, load_classifier, time_synchronized
-from learning import deepcall
-from threading import Thread
-from tkinter import messagebox as msg
-from siren import call_siren
 
 
 def check(xyxy, xyxytemp):
@@ -104,7 +103,7 @@ juso_db = pymysql.connect(
     charset='utf8'
 )
 @torch.no_grad()
-def detect(weights='yolov5s.pt',  # model.pt path(s)
+def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
            source='data/images',  # file/dir/URL/glob, 0 for webcam
            w_width=1280,
            w_height=720,
