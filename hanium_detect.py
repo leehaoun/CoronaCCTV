@@ -5,7 +5,7 @@ import argparse
 import os
 import time
 from pathlib import Path
-from threading import Thread
+from threading import Thread, Timer
 from siren  import call_siren
 import cv2
 import torch
@@ -78,6 +78,7 @@ def check_Cross(x, comp):
         return True
     else:
         return False
+
 
 # --------------텍스트박스 위치--------------------#
 center = [960, 100, 960, 100]
@@ -210,6 +211,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
     sani_lock = [False, False] # sani의 검출이 sani_x 주변에서 딱 1번만 실행하도록 하는 용도
     temp_lock = [False, False] # temp의 검출이 temp_x 주변에서 딱 1번만 실행하도록 하는 용도
     qr_lock = [False, False] # qr의 검출이 qr 주변에서 딱 1번만 실행하도록 하는 용도
+    checking = 0
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
@@ -310,41 +312,57 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                     n = (det[:, -1] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
                 # Write results
-                if mod == 0:
-                    if init_check != [1, 1, 1]:
-                        init_check = [0, 0, 0]
-                    else:
-                        key = True
-                elif mod == 1:
-                    if init_check != [0, 1, 1]:
-                        init_check = [0, 0, 0]
-                    else:
-                        key = True
-                elif mod == 2:
-                    if init_check != [1, 0, 1]:
-                        init_check = [0, 0, 0]
-                    else:
-                        key = True
-                elif mod == 3:
-                    if init_check != [1, 1, 0]:
-                        init_check = [0, 0, 0]
-                    else:
-                        key = True
-                elif mod == 4:
-                    if init_check != [1, 0, 0]:
-                        init_check = [0, 0, 0]
-                    else:
-                        key = True
-                elif mod == 5:
-                    if init_check != [0, 1, 0]:
-                        init_check = [0, 0, 0]
-                    else:
-                        key = True
-                elif mod == 6:
-                    if init_check != [0, 0, 1]:
-                        init_check = [0, 0, 0]
-                    else:
-                        key = True
+                if key ==False:
+                    if mod == 0:
+                        if init_check != [1, 1, 1]:
+                            init_check = [0, 0, 0]
+                            checking = 0
+                        else:
+                            checking = checking + 1
+                            cv2.putText(im0, "%d" % (10-checking/20), (700,700), cv2.FONT_ITALIC, 30,(0,140,255), 50) 
+                    elif mod == 1:
+                        if init_check != [0, 1, 1]:
+                            init_check = [0, 0, 0]
+                        else:
+                            checking = checking + 1
+                            cv2.putText(im0, "%d" % (10-checking/20), (500,500), cv2.FONT_ITALIC, 30,(255,140,0), 5) 
+                    elif mod == 2:
+                        if init_check != [1, 0, 1]:
+                            init_check = [0, 0, 0]
+                            checking = 0
+                        else:
+                            checking = checking + 1
+                            cv2.putText(im0, "%d" % (10-checking/20), (500,500), cv2.FONT_ITALIC, 30,(255,140,0), 5) 
+                    elif mod == 3:
+                        if init_check != [1, 1, 0]:
+                            init_check = [0, 0, 0]
+                            checking = 0
+                        else:
+                            checking = checking + 1
+                            cv2.putText(im0, "%d" % (10-checking/20), (int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH)/2), int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/2)), cv2.FONT_ITALIC, 30,(255,255,255), 5) 
+                    elif mod == 4:
+                        if init_check != [1, 0, 0]:
+                            init_check = [0, 0, 0]
+                            checking = 0
+                        else:
+                            checking = checking + 1
+                            cv2.putText(im0, "%d" % (10-checking/20), (int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH)/2), int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/2)), cv2.FONT_ITALIC, 30,(255,255,255), 5) 
+                    elif mod == 5:
+                        if init_check != [0, 1, 0]:
+                            init_check = [0, 0, 0]
+                            checking = 0
+                        else:
+                            checking = checking + 1
+                            cv2.putText(im0, "%d" % (10-checking/20), (int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH)/2), int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/2)), cv2.FONT_ITALIC, 30,(255,255,255), 5) 
+                    elif mod == 6:
+                        if init_check != [0, 0, 1]:
+                            init_check = [0, 0, 0]
+                            checking = 0
+                        else:
+                            checking = checking + 1
+                            cv2.putText(im0, "%d" % (10-checking/20), (int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH)/2), int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)/2)), cv2.FONT_ITALIC, 30,(255,255,255), 5) 
+                if (checking/20) == 10:
+                    key = True 
                 for *xyxy, conf, cls in reversed(det):  # reversed(det) = 1box, cls 0.0 = head , 1.0 = hands, 2.0 = sanitizer, 3.0 = temperature, 4.0 = qrcd 
                     if cls.item() in mode_check:
                         if cls.item() == 2.0 and sani_pos_check(xyxy, sani_pos):
