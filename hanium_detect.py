@@ -6,7 +6,7 @@ import os
 import time
 from pathlib import Path
 from threading import Thread
-
+from siren  import call_siren
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
