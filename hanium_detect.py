@@ -98,7 +98,7 @@ detected_mask_count = [0] # mask의 검출 횟수를 담는 변수
 
 juso_db = pymysql.connect(
     user='root',
-    passwd='rlaeodud12!1',
+    passwd='root',
     host='127.0.0.1',
     db='corona',
     charset='utf8'

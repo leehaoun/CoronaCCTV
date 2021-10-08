@@ -14,3 +14,4 @@ pandas
 pyusb
 qt-material~=2.8.10
 pyside6~=6.2.0
+pymysql
