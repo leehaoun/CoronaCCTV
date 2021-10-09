@@ -12,14 +12,13 @@ from ui import Ui_MainWindow
 
 #  pyside6, qt_material, pymysql 설치 필요 (requirements에 추가했음)
 #  폴더 내의 material.css.template을 파이썬이 설치된 폴더의 Lib\site-packages\qt_material 안에 붙여넣어야 한다.
+# TODO 기능 추가
 
-# 2021-10-08 UPDATE: DB 관리 추가, 로그 기능 부분 완성
-# TODO 로그 기능 완성 , 기능 추가, 경보 및 선택 코로나 행위 완성
 class MainWindow(QMainWindow):
     # DB 연결
     corona_db = pymysql.connect(
         user='root',
-        passwd='coldplay96!',
+        passwd='password',
         host='localhost',
         db='corona',
         charset='utf8mb4'
@@ -58,10 +57,12 @@ class MainWindow(QMainWindow):
         db_check_result = self.cursor.fetchall()
         if len(db_check_result) == 0:
             self.cursor.execute("""CREATE TABLE log(
-                        id INT(255) NOT NULL AUTO_INCREMENT PRIMARY KEY, 
-                        time DATETIME, 
-                        check_act VARCHAR(255)
-                        );""")
+        id INT(255) NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+        time DATETIME, 
+        check_act VARCHAR(255),
+        ab_path VARCHAR(255),
+        file_name VARCHAR(255)
+        );""")
 
         # GUI 실행 시 DB 정보 불러오기
         db_init = """SELECT * FROM log"""
@@ -219,7 +220,8 @@ class MainWindow(QMainWindow):
             self.ui.alarm_ck_all.setChecked(False)
         else:
             self.lock_alarm = True
-            if self.ui.alarm_ck_light.isChecked() and self.ui.alarm_ck_siren.isChecked() and self.ui.alarm_ck_msg.isChecked():
+            if self.ui.alarm_ck_light.isChecked() and self.ui.alarm_ck_siren.isChecked() and \
+                    self.ui.alarm_ck_msg.isChecked():
                 self.ui.alarm_ck_all.setChecked(True)
 
         alarm_widgets = [
@@ -251,7 +253,8 @@ class MainWindow(QMainWindow):
             self.ui.corona_ck_all.setChecked(False)
         else:
             self.lock_corona = True
-            if self.ui.corona_ck_qr.isChecked() and self.ui.corona_ck_temp.isChecked() and self.ui.corona_ck_sani.isChecked():
+            if self.ui.corona_ck_qr.isChecked() and self.ui.corona_ck_temp.isChecked() \
+                    and self.ui.corona_ck_sani.isChecked():
                 self.ui.corona_ck_all.setChecked(True)
 
         corona_act_widgets = [

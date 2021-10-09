@@ -105,7 +105,7 @@ log_data = []
 
 juso_db = pymysql.connect(
     user='root',
-    passwd='coldplay96!',
+    passwd='password',
     host='127.0.0.1',
     db='corona',
     charset='utf8'
@@ -222,10 +222,12 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
     db_check_result = cursor.fetchall()
     if len(db_check_result) == 0:
         cursor.execute("""CREATE TABLE log(
-        id INT(255) NOT NULL AUTO_INCREMENT PRIMARY KEY, 
-        time DATETIME, 
-        check_act VARCHAR(255)
-        );""")
+                id INT(255) NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+                time DATETIME, 
+                check_act VARCHAR(255),
+                ab_path VARCHAR(255),
+                file_name VARCHAR(255)
+                );""")
         cursor.fetchall()
 
     check_sani = False  # BBOX 겹침이 발생했을 때, sani의 bbox를 custom-Layer로 보내서, 손소독제를 짜는 상황의 sani인지 체크하는 변수
@@ -481,6 +483,10 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                 plot_one_box(siren, im0, label="Not Mask!!!",
                                                              color=colors(int(200), True),
                                                              line_thickness=line_thickness)
+                                                file_name = "mask" + str(detected_mask_count[0])
+                                                repath = "./runs/detect/mask/" + file_name + ".jpg"
+                                                cv2.imwrite(repath, im0)
+                                                ab_path = Path(repath).absolute()
                                                 now = datetime.datetime.now()
                                                 now = now.strftime('%Y-%m-%d %H:%M:%S')
                                                 log_data.append(
@@ -489,8 +495,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                         "act": "마스크 미착용",
                                                     }
                                                 )
-                                                cursor.execute(
-                                                    """INSERT INTO log (time, check_act) VALUES (%s,'마스크')""", now)
+                                                cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'마스크',%s,%s)""", (now, ab_path, file_name))
                                                 if alarm_msg:
                                                     send_message(now, "7호관 뒷문 검역소", "마스크")
                                                 cursor.fetchall()
@@ -587,6 +592,10 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                         plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
                                                      line_thickness=line_thickness)
                                         detected_sani_count[0] = detected_sani_count[0] + 1
+                                        file_name = "sani" + str(detected_sani_count[0])
+                                        repath = "./runs/detect/sani/" + file_name + ".jpg"
+                                        cv2.imwrite(repath, im0)
+                                        ab_path = Path(repath).absolute()
                                         now = datetime.datetime.now()
                                         now = now.strftime('%Y-%m-%d %H:%M:%S')
                                         log_data.append(
@@ -595,7 +604,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                 "act": "손소독제 미사용",
                                             }
                                         )
-                                        cursor.execute("""INSERT INTO log (time, check_act) VALUES (%s,'손소독')""", now)
+                                        cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'손소독',%s,%s)""", (now, ab_path, file_name))
                                         if alarm_msg:
                                             send_message(now, "7호관 뒷문 검역소", "손소독제")
                                         cursor.fetchall()
@@ -611,6 +620,10 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                         plot_one_box(siren, im0, label="Not temp!!!", color=colors(int(200), True),
                                                      line_thickness=line_thickness)
                                         detected_temp_count[0] = detected_temp_count[0] + 1
+                                        file_name = "temp" + str(detected_temp_count[0])
+                                        repath = "./runs/detect/temp/" + file_name + ".jpg"
+                                        cv2.imwrite(repath, im0)
+                                        ab_path = Path(repath).absolute()
                                         now = datetime.datetime.now()
                                         now = now.strftime('%Y-%m-%d %H:%M:%S')
                                         log_data.append(
@@ -619,7 +632,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                 "act": "온도계 미사용",
                                             }
                                         )
-                                        cursor.execute("""INSERT INTO log (time, check_act) VALUES (%s,'온도계')""", now)
+                                        cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'온도계',%s,%s)""", (now, ab_path, file_name))
                                         if alarm_msg:
                                             send_message(now, "7호관 뒷문 검역소", "체온검사")
                                             print("test")
@@ -636,6 +649,10 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                         plot_one_box(siren, im0, label="Not qrcd!!!", color=colors(int(200), True),
                                                      line_thickness=line_thickness)
                                         detected_qr_count[0] = detected_qr_count[0] + 1
+                                        file_name = "qrcd" + str(detected_qr_count[0])
+                                        repath = "./runs/detect/qrcd/" + file_name + ".jpg"
+                                        cv2.imwrite(repath, im0)
+                                        ab_path = Path(repath).absolute()
                                         now = datetime.datetime.now()
                                         now = now.strftime('%Y-%m-%d %H:%M:%S')
                                         log_data.append(
@@ -644,7 +661,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                 "act": "QR 코드 체크 미시행",
                                             }
                                         )
-                                        cursor.execute("""INSERT INTO log (time, check_act) VALUES (%s,'QR')""", now)
+                                        cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'QR',%s,%s)""", (now, ab_path, file_name))
                                         if alarm_msg:
                                             send_message(now, "7호관 뒷문 검역소", "마스크")
                                         cursor.fetchall()
