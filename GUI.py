@@ -1,18 +1,32 @@
 import datetime
 import sys
+import pymysql
 from PySide6.QtCore import QDateTime, QTimer
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QMainWindow, QApplication, QMessageBox
+from PySide6.QtWidgets import QMainWindow, QApplication, QMessageBox, QTableWidgetItem
 from qt_material import apply_stylesheet
 
 import hanium_detect
 from ui import Ui_MainWindow
 
 
-#  pyside6, qt_material 설치 필요 (requirements에 추가했음)
+#  pyside6, qt_material, pymysql 설치 필요 (requirements에 추가했음)
 #  폴더 내의 material.css.template을 파이썬이 설치된 폴더의 Lib\site-packages\qt_material 안에 붙여넣어야 한다.
-# TODO 로그 기능 완성 , 기능 추가
+
+# 2021-10-08 UPDATE: DB 관리 추가, 로그 기능 부분 완성
+# TODO 로그 기능 완성 , 기능 추가, 경보 및 선택 코로나 행위 완성
 class MainWindow(QMainWindow):
+
+    # DB 연결
+    corona_db = pymysql.connect(
+        user='root',
+        passwd='coldplay96!',
+        host='localhost',
+        db='corona',
+        charset='utf8mb4'
+    )
+    cursor = corona_db.cursor(pymysql.cursors.DictCursor)
+
     # 코로나 CCTV 프로그램 실행 시 넘겨줄 파라미터값 저장 변수
     processor = "GPU"
     label = "ON"
@@ -20,10 +34,11 @@ class MainWindow(QMainWindow):
     display = "1280x720"
     alarm = "모두"
 
-    # Checkbox 선택 시 무한 호출 방지용 변수 + 시간 변수
+    # Checkbox 선택 시 무한 호출 방지용 변수 + 시간 변수 + 로그용 인덱스 변수
     lock_alarm = False
     lock_corona = False
     datetime = QDateTime.currentDateTime()
+    index = 0
 
     def __init__(self):
 
@@ -31,10 +46,58 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
+        # DB 테이블 시간 컬럼 크기 수정
+        self.ui.table_db.setColumnWidth(0, self.width() * 2 / 10)
+
         # 아이콘 설정
         self.setWindowIcon(QIcon("./cctv.png"))
 
-        # 시간 출력, self.tick 호출
+        # 프로그램 첫 실행 시 DB 생성
+        db_check = "SHOW TABLES LIKE 'log';"
+        self.cursor.execute(db_check)
+        db_check_result = self.cursor.fetchall()
+        if len(db_check_result) == 0:
+            self.cursor.execute("""CREATE TABLE log(
+                        id INT(255) NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+                        time DATETIME, 
+                        check_act VARCHAR(255)
+                        );""")
+
+        # GUI 실행 시 DB 정보 불러오기
+        db_init = """SELECT * FROM log"""
+        self.cursor.execute(db_init)
+        db_init_data = self.cursor.fetchall()
+        db_sani_num = 0
+        db_temp_num = 0
+        db_mask_num = 0
+        db_qr_num = 0
+        for data in db_init_data:
+            index = 0
+            self.ui.table_db.insertRow(index)
+            time_data = data['time'].strftime('%Y-%m-%d %H:%M:%S')
+            self.ui.table_db.setItem(index, 0, QTableWidgetItem(time_data))
+            self.ui.table_db.setItem(index, 1, QTableWidgetItem(data['check_act']))
+            index += 1
+            if data['check_act'] == '손소독':
+                db_sani_num += 1
+            elif data['check_act'] == '온도계':
+                db_temp_num += 1
+            elif data['check_act'] == 'QR':
+                db_qr_num += 1
+            else:
+                db_mask_num += 1
+
+        db_total_num = db_sani_num + db_temp_num + db_qr_num + db_mask_num
+        self.ui.lcd_db_sani.display(db_sani_num)
+        self.ui.lcd_db_temp.display(db_temp_num)
+        self.ui.lcd_db_qr.display(db_qr_num)
+        self.ui.lcd_db_mask.display(db_mask_num)
+        self.ui.lcd_db_total.display(db_total_num)
+
+        # 시간 출력, self.tick 호출, DB 시간 실행 시간으로 맞춤
+        now = datetime.datetime.now()
+        self.ui.time_db.setDateTime(now)
+
         self.timer = QTimer()
         self.timer.setInterval(990)
         self.timer.timeout.connect(self.tick)
@@ -77,6 +140,17 @@ class MainWindow(QMainWindow):
 
         # UI 실행 시 설정환경창 업데이트
         self.text_load()
+
+        # 로그 초기화 버튼 누를 시 log_clear 호출 + DB 초기화 버튼 누를 시 db_clear 호출
+        self.ui.btn_log_clear.clicked.connect(self.log_clear)
+        self.ui.btn_db_clear.clicked.connect(self.db_clear)
+
+        # 원래대로 버튼이나 DB 업데이트 버튼 누를 시 db_update 호출
+        self.ui.btn_db_update.clicked.connect(self.db_update)
+        self.ui.btn_db_ori.clicked.connect(self.db_update)
+
+        # DB 검색 버튼 누를 시 db_search 호출
+        self.ui.btn_search_db.clicked.connect(self.db_search)
 
         # 시작 버튼 누를 시 self.start 호출
         self.ui.btn_start.clicked.connect(self.start)
@@ -197,6 +271,7 @@ class MainWindow(QMainWindow):
 
     # 시작 버튼 누를 시 동작 : 파라미터값 업데이트 + lcd 업데이트 + 코로나 CCTV 실행
     def start(self):
+        # 파라미터값 업데이트 + DB 연결
         if self.processor == "GPU":
             device = '0'
         else:
@@ -207,12 +282,16 @@ class MainWindow(QMainWindow):
             hide_labels = True
         win_size = self.display.split('x')
 
-        lcd_timer = QTimer()
-        lcd_timer.setInterval(990)
-        lcd_timer.timeout.connect(self.lcd_update)
-        lcd_timer.start()
+        # lcd + log 업데이트
+        start_timer = QTimer()
+        start_timer.setInterval(990)
+        start_timer.timeout.connect(self.lcd_update)
+        start_timer.timeout.connect(self.log_update)
+        start_timer.start()
 
-        hanium_detect.detect(source='./data/videos/random.mp4', w_width=int(win_size[0]), w_height=int(win_size[1]),
+        # 코로나 CCTV 실행
+        hanium_detect.detect(source='C:/Users/ACER/Desktop/random.mp4', w_width=int(win_size[0]),
+                             w_height=int(win_size[1]),
                              device=device, conf_thres=float(self.rel) / 100, hide_labels=hide_labels)
 
     # lcd 설정
@@ -225,6 +304,96 @@ class MainWindow(QMainWindow):
             self.ui.lcd_mask_num.value() + self.ui.lcd_qr_num.value() +
             self.ui.lcd_temp_num.value() + self.ui.lcd_sani_num.value()
         )
+
+    # 시작 버튼 누를 시 동작: 로그 업데이트
+    def log_update(self):
+        if len(hanium_detect.log_data) > self.index:
+            log = f"{hanium_detect.log_data[self.index]['time']}경 {hanium_detect.log_data[self.index]['act']}한 사용자 탐지\n"
+            self.ui.text_log.append(log)
+            self.index += 1
+
+    # 로그 초기화 버튼 누를 시 동작: 로그 초기화
+    def log_clear(self):
+        self.ui.text_log.setText("")
+
+    # DB 업데이트 버튼이나 DB 검색의 원래대로 버튼 누를 시 동작: 현 DB 내용으로 업데이트
+    def db_update(self):
+        self.ui.table_db.setRowCount(0)
+        corona_db = pymysql.connect(
+            user='root',
+            passwd='coldplay96!',
+            host='localhost',
+            db='corona',
+            charset='utf8mb4'
+        )
+        cursor = corona_db.cursor(pymysql.cursors.DictCursor)
+        db_init = """SELECT * FROM log"""
+        cursor.execute(db_init)
+        db_init_data = cursor.fetchall()
+        db_sani_num = 0
+        db_temp_num = 0
+        db_mask_num = 0
+        db_qr_num = 0
+        for data in db_init_data:
+            index = 0
+            self.ui.table_db.insertRow(index)
+            time_data = data['time'].strftime('%Y-%m-%d %H:%M:%S')
+            self.ui.table_db.setItem(index, 0, QTableWidgetItem(time_data))
+            self.ui.table_db.setItem(index, 1, QTableWidgetItem(data['check_act']))
+            index += 1
+            if data['check_act'] == '손소독':
+                db_sani_num += 1
+            elif data['check_act'] == '온도계':
+                db_temp_num += 1
+            elif data['check_act'] == 'QR':
+                db_qr_num += 1
+            else:
+                db_mask_num += 1
+
+        db_total_num = db_sani_num + db_temp_num + db_qr_num + db_mask_num
+        self.ui.lcd_db_sani.display(db_sani_num)
+        self.ui.lcd_db_temp.display(db_temp_num)
+        self.ui.lcd_db_qr.display(db_qr_num)
+        self.ui.lcd_db_mask.display(db_mask_num)
+        self.ui.lcd_db_total.display(db_total_num)
+        self.cursor = cursor
+
+    # DB 초기화 버튼 누를 시 동작: DB 초기화
+    def db_clear(self):
+        msg = QMessageBox()
+        reply = msg.warning(self, '경고!', "DB의 모든 데이터가 지워집니다!\n 그래도 진행하시겠습니까?",
+                            QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            table_data_delete = """TRUNCATE log"""
+            self.cursor.execute(table_data_delete)
+            self.ui.table_db.setRowCount(0)
+            self.ui.lcd_db_sani.display(0)
+            self.ui.lcd_db_temp.display(0)
+            self.ui.lcd_db_qr.display(0)
+            self.ui.lcd_db_mask.display(0)
+            self.ui.lcd_db_total.display(0)
+        else:
+            return
+
+    # DB 검색의 검색 버튼 누를 시 동작: 검색 내용에 맞춰 DB 테이블 변경
+    def db_search(self):
+        self.ui.table_db.setRowCount(0)
+        search_data_time = self.ui.time_db.dateTime().toPython()
+        search_data_act = self.ui.act_db.currentText()
+
+        db_search_sql = """SELECT * FROM log WHERE log.check_act = %s"""
+        self.cursor.execute(db_search_sql, search_data_act)
+        db_data = self.cursor.fetchall()
+
+        for data in db_data:
+            time = search_data_time - data['time']
+            if int(time.total_seconds()) < 0:
+                index = 0
+                self.ui.table_db.insertRow(index)
+                time_data = data['time'].strftime('%Y-%m-%d %H:%M:%S')
+                self.ui.table_db.setItem(index, 0, QTableWidgetItem(time_data))
+                self.ui.table_db.setItem(index, 1, QTableWidgetItem(data['check_act']))
+                index += 1
 
 
 # Main

@@ -95,10 +95,11 @@ detected_sani_count = [0] # sani의 검출 횟수를 담는 변수
 detected_temp_count = [0] # temp의 검출 횟수를 담는 변수
 detected_qr_count = [0] # qr의 검출 횟수를 담는 변수
 detected_mask_count = [0] # mask의 검출 횟수를 담는 변수
+log_data = []
 
 juso_db = pymysql.connect(
     user='root',
-    passwd='root',
+    passwd='coldplay96!',
     host='127.0.0.1',
     db='corona',
     charset='utf8'
@@ -431,11 +432,13 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                             line_thickness=line_thickness)
                                                 now = datetime.datetime.now()
                                                 now = now.strftime('%Y-%m-%d %H:%M:%S')
-                                                cursor.execute("""
-                                                 INSERT INTO log 
-                                                 (time, check_act)
-                                                 VALUES (%s,0)
-                                                 """, now)
+                                                log_data.append(
+                                                    {
+                                                        "time": now,
+                                                        "act": "마스크 미착용",
+                                                    }
+                                                )
+                                                cursor.execute("""INSERT INTO log (time, check_act) VALUES (%s,'마스크')""", now)
                                                 send_message(now, "7호관 뒷문 검역소", "마스크")
                                                 cursor.fetchall()
                                                 juso_db.commit()
@@ -532,11 +535,13 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                         detected_sani_count[0] = detected_sani_count[0] + 1
                                         now = datetime.datetime.now()
                                         now = now.strftime('%Y-%m-%d %H:%M:%S')
-                                        cursor.execute("""
-                                         INSERT INTO log 
-                                         (time, check_act)
-                                         VALUES (%s,1)
-                                         """, now)
+                                        log_data.append(
+                                            {
+                                                "time": now,
+                                                "act": "손소독제 미사용",
+                                            }
+                                        )
+                                        cursor.execute("""INSERT INTO log (time, check_act) VALUES (%s,'손소독')""", now)
                                         send_message(now, "7호관 뒷문 검역소", "손소독제")
                                         cursor.fetchall()
                                         juso_db.commit()
@@ -553,11 +558,13 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                         detected_temp_count[0] = detected_temp_count[0] + 1
                                         now = datetime.datetime.now()
                                         now = now.strftime('%Y-%m-%d %H:%M:%S')
-                                        cursor.execute("""
-                                          INSERT INTO log 
-                                          (time, check_act)
-                                          VALUES (%s,2)
-                                          """, now)
+                                        log_data.append(
+                                            {
+                                                "time": now,
+                                                "act": "온도계 미사용",
+                                            }
+                                        )
+                                        cursor.execute("""INSERT INTO log (time, check_act) VALUES (%s,'온도계')""", now)
                                         send_message(now, "7호관 뒷문 검역소", "체온검사")
                                         cursor.fetchall()
                                         juso_db.commit()
@@ -574,11 +581,13 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                         detected_qr_count[0] = detected_qr_count[0] + 1
                                         now = datetime.datetime.now()
                                         now = now.strftime('%Y-%m-%d %H:%M:%S')
-                                        cursor.execute("""
-                                         INSERT INTO log 
-                                         (time, check_act)
-                                         VALUES (%s,3)
-                                         """, now)
+                                        log_data.append(
+                                            {
+                                                "time": now,
+                                                "act": "QR 코드 체크 미시행",
+                                            }
+                                        )
+                                        cursor.execute("""INSERT INTO log (time, check_act) VALUES (%s,'QR')""", now)
                                         send_message(now, "7호관 뒷문 검역소", "마스크")
                                         cursor.fetchall()
                                         juso_db.commit()
