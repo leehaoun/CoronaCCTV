@@ -16,7 +16,6 @@ from ui import Ui_MainWindow
 # 2021-10-08 UPDATE: DB 관리 추가, 로그 기능 부분 완성
 # TODO 로그 기능 완성 , 기능 추가, 경보 및 선택 코로나 행위 완성
 class MainWindow(QMainWindow):
-
     # DB 연결
     corona_db = pymysql.connect(
         user='root',
@@ -33,6 +32,7 @@ class MainWindow(QMainWindow):
     rel = "50"
     display = "1280x720"
     alarm = "모두"
+    corona_act = "모두"
 
     # Checkbox 선택 시 무한 호출 방지용 변수 + 시간 변수 + 로그용 인덱스 변수
     lock_alarm = False
@@ -222,10 +222,25 @@ class MainWindow(QMainWindow):
             if self.ui.alarm_ck_light.isChecked() and self.ui.alarm_ck_siren.isChecked() and self.ui.alarm_ck_msg.isChecked():
                 self.ui.alarm_ck_all.setChecked(True)
 
+        alarm_widgets = [
+            "alarm_ck_all",
+            "alarm_ck_siren",
+            "alarm_ck_light",
+            "alarm_ck_msg",
+        ]
+        self.alarm = ""
+        for w in alarm_widgets:
+            widget = getattr(self.ui, w)
+            if widget.isChecked() and widget.text() == '모두':
+                self.alarm = "모두"
+                break
+            elif widget.isChecked():
+                self.alarm += widget.text()
+                self.alarm += " "
+        self.text_load()
         self.lock_alarm = False
 
-    # 검사할 코로나 소독 행위 선택 시 동작
-    # TODO 딕셔너리로 수정, 설정환경창 업데이트, 파라미터값 업데이트
+    # 검사할 코로나 소독 행위 선택 시 동작 + 파라미터값, 설정환경창 업데이트
     def corona_check(self):
         if self.sender() == self.ui.corona_ck_all and self.lock_corona is False:
             self.ui.corona_ck_qr.setChecked(self.ui.corona_ck_all.isChecked())
@@ -239,6 +254,22 @@ class MainWindow(QMainWindow):
             if self.ui.corona_ck_qr.isChecked() and self.ui.corona_ck_temp.isChecked() and self.ui.corona_ck_sani.isChecked():
                 self.ui.corona_ck_all.setChecked(True)
 
+        corona_act_widgets = [
+            "corona_ck_all",
+            "corona_ck_sani",
+            "corona_ck_temp",
+            "corona_ck_qr",
+        ]
+        self.corona_act = ""
+        for w in corona_act_widgets:
+            widget = getattr(self.ui, w)
+            if widget.isChecked() and widget.text() == '모두':
+                self.corona_act = "모두"
+                break
+            elif widget.isChecked():
+                self.corona_act += widget.text()
+                self.corona_act += " "
+        self.text_load()
         self.lock_corona = False
 
     # 프로세서 선택 시 동작 : processor 변수 업데이트 + 설정환경창 업데이트
@@ -265,6 +296,7 @@ class MainWindow(QMainWindow):
             f"프로세서: {self.processor}\n" +
             f"라벨 표시 유무: {self.label}\n" +
             f"경보: {self.alarm}\n" +
+            f"소독: {self.corona_act}\n"
             f"화면 해상도: {self.display}\n" +
             f"신뢰도: {self.rel}%"
         )
@@ -276,10 +308,54 @@ class MainWindow(QMainWindow):
             device = '0'
         else:
             device = 'cpu'
+
         if self.label == 'ON':
             hide_labels = False
         else:
             hide_labels = True
+
+        if self.corona_act == "":
+            msg = QMessageBox()
+            msg.warning(self, '경고!', "검사할 코로나 소독 행위를 선택해주세요!")
+            return
+        elif self.corona_act == "모두":
+            mod_set = 0
+        elif self.corona_act == "온도계 QR 체크 ":
+            mod_set = 1
+        elif self.corona_act == '손 소독 QR 체크 ':
+            mod_set = 2
+        elif self.corona_act == '손 소독 온도계 ':
+            mod_set = 3
+        elif self.corona_act == '손 소독 ':
+            mod_set = 4
+        elif self.corona_act == "온도계 ":
+            mod_set = 5
+        else:
+            mod_set = 6
+
+        if self.alarm == "":
+            msg = QMessageBox()
+            reply = msg.warning(self, '경고!', "어떤 경보도 선택되지 않았습니다!\n 그래도 진행하시겠습니까?",
+                                QMessageBox.Yes | QMessageBox.No)
+            if reply == QMessageBox.No:
+                return
+            else:
+                alarm = 7
+        elif self.alarm == "모두":
+            alarm = 0
+        elif self.alarm == "경광등 메세지 ":
+            alarm = 1
+        elif self.alarm == "사이렌 메세지 ":
+            alarm = 2
+        elif self.alarm == "사이렌 경광등 ":
+            alarm = 3
+        elif self.alarm == "사이렌 ":
+            alarm = 4
+        elif self.alarm == "경광등 ":
+            alarm = 5
+        else:
+            alarm = 6
+
         win_size = self.display.split('x')
 
         # lcd + log 업데이트
@@ -291,8 +367,8 @@ class MainWindow(QMainWindow):
 
         # 코로나 CCTV 실행
         hanium_detect.detect(source='C:/Users/ACER/Desktop/random.mp4', w_width=int(win_size[0]),
-                             w_height=int(win_size[1]),
-                             device=device, conf_thres=float(self.rel) / 100, hide_labels=hide_labels)
+                             w_height=int(win_size[1]), device=device, conf_thres=float(self.rel) / 100,
+                             hide_labels=hide_labels, mod=int(mod_set), set_alarm=int(alarm))
 
     # lcd 설정
     def lcd_update(self):
