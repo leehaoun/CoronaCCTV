@@ -16,7 +16,7 @@ import threading
 import usb.core
 import usb.util
 import pymysql
-
+from kakao import send_message
 from learning import deepcall
 from models.experimental import attempt_load
 #from siren import call_siren
@@ -436,7 +436,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                  (time, check_act)
                                                  VALUES (%s,0)
                                                  """, now)
-                                                print("dbsave!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                                                send_message(now, "7호관 뒷문 검역소", "마스크")
                                                 cursor.fetchall()
                                                 juso_db.commit()
                                                 if alarm:
@@ -537,6 +537,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                          (time, check_act)
                                          VALUES (%s,1)
                                          """, now)
+                                        send_message(now, "7호관 뒷문 검역소", "손소독제")
                                         cursor.fetchall()
                                         juso_db.commit()
                                         if alarm:
@@ -557,6 +558,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                           (time, check_act)
                                           VALUES (%s,2)
                                           """, now)
+                                        send_message(now, "7호관 뒷문 검역소", "체온검사")
                                         cursor.fetchall()
                                         juso_db.commit()
                                         if alarm:
@@ -577,6 +579,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                          (time, check_act)
                                          VALUES (%s,3)
                                          """, now)
+                                        send_message(now, "7호관 뒷문 검역소", "마스크")
                                         cursor.fetchall()
                                         juso_db.commit()
                                         if alarm:
