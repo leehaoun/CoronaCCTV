@@ -105,7 +105,7 @@ log_data = []
 
 juso_db = pymysql.connect(
     user='root',
-    passwd='password',
+    passwd='root',
     host='127.0.0.1',
     db='corona',
     charset='utf8'
@@ -484,7 +484,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                              color=colors(int(200), True),
                                                              line_thickness=line_thickness)
                                                 file_name = "mask" + str(detected_mask_count[0])
-                                                repath = "./runs/detect/mask/" + file_name + ".jpg"
+                                                repath = "./detected_image/mask/" + file_name + ".jpg"
                                                 cv2.imwrite(repath, im0)
                                                 ab_path = Path(repath).absolute()
                                                 now = datetime.datetime.now()
@@ -593,7 +593,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                      line_thickness=line_thickness)
                                         detected_sani_count[0] = detected_sani_count[0] + 1
                                         file_name = "sani" + str(detected_sani_count[0])
-                                        repath = "./runs/detect/sani/" + file_name + ".jpg"
+                                        repath = "./detected_image/sani/" + file_name + ".jpg"
                                         cv2.imwrite(repath, im0)
                                         ab_path = Path(repath).absolute()
                                         now = datetime.datetime.now()
@@ -621,7 +621,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                      line_thickness=line_thickness)
                                         detected_temp_count[0] = detected_temp_count[0] + 1
                                         file_name = "temp" + str(detected_temp_count[0])
-                                        repath = "./runs/detect/temp/" + file_name + ".jpg"
+                                        repath = "./detected_image/temp/" + file_name + ".jpg"
                                         cv2.imwrite(repath, im0)
                                         ab_path = Path(repath).absolute()
                                         now = datetime.datetime.now()
@@ -650,7 +650,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                      line_thickness=line_thickness)
                                         detected_qr_count[0] = detected_qr_count[0] + 1
                                         file_name = "qrcd" + str(detected_qr_count[0])
-                                        repath = "./runs/detect/qrcd/" + file_name + ".jpg"
+                                        repath = "./detected_image/qr/" + file_name + ".jpg"
                                         cv2.imwrite(repath, im0)
                                         ab_path = Path(repath).absolute()
                                         now = datetime.datetime.now()
