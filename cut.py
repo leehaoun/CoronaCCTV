@@ -8,7 +8,7 @@ def cut():
     while(vidcap.isOpened()):
         ret, image = vidcap.read()
         # 30프레임당 하나씩 이미지 추출 
-        if(int(vidcap.get(1)) % 10 == 0): 
+        if(int(vidcap.get(1)) % 5 == 0): 
             # 추출된 이미지가 저장되는 경로 
             cv2.imwrite("./cut/frame%d.jpg" % count, image) 
             print('Saved frame%d.jpg' % count) 

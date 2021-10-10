@@ -240,7 +240,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
     sani_x_end = 0  # sani_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
     temp_x_end = 0  # temp_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
     qrcd_x_end = 0  # qrcd_check의 값에 따라 경보를 울릴것인지, 말 것인지 결정하는 위치를 담음
-    key = False  # False = 설정모드, True = 검출모드
+    key = True  # False = 설정모드, True = 검출모드
     init_check = [0, 0, 0]  # 3객체가 적당한 위치에 배치되었는지 확인하는 용도, [1,1,1]이 저장된다면 key를 true로 바꾸고 검출모드 시작
     init_check = [0, 0, 0]  # 3객체가 적당한 위치에 배치되었는지 확인하는 용도, [1,1,1]이 저장된다면 key를 true로 바꾸고 검출모드 시작
     sani_lock = [False, False]  # sani의 검출이 sani_x 주변에서 딱 1번만 실행하도록 하는 용도
@@ -568,15 +568,15 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                 if check_Cross(xyxy[0], sani_x_start) and sani_lock[0] == False:
                                     check_sani = False
                                     sani_lock[0] = True
-                                    threading.Timer(10, sani_lock_free).start()
+                                    # threading.Timer(20, sani_lock_free).start()
                                 if check_Cross(xyxy[0], temp_x_start) and temp_lock[0] == False:
                                     check_temp = False
                                     temp_lock[0] = True
-                                    threading.Timer(10, temp_lock_free).start()
+                                    # threading.Timer(10, temp_lock_free).start()
                                 if check_Cross(xyxy[0], qrcd_x_start) and qr_lock[0] == False:
                                     check_qrcd = False
                                     qr_lock[0] = True
-                                    threading.Timer(10, qr_lock_free).start()
+                                    # threading.Timer(10, qr_lock_free).start()
 
                                 if check_Cross(xyxy[2], sani_x_end) and 2.0 in mode_check:
                                     sani_lock[0] = False
@@ -613,7 +613,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                             th1 = Thread(target=call_siren(alarm_light, alarm_siren))
                                             th1.start()
                                         sani_lock[1] = True
-                                        threading.Timer(10, sani_lock_free).start()
+                                        # threading.Timer(10, sani_lock_free).start()
 
                                 if check_Cross(xyxy[0], temp_x_end) and 3.0 in mode_check:
                                     if check_temp == False and temp_lock[1] == False:
@@ -642,7 +642,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                             th1 = Thread(target=call_siren(alarm_light, alarm_siren))
                                             th1.start()
                                         temp_lock[1] = True
-                                        threading.Timer(10, temp_lock_free).start()
+                                        # threading.Timer(10, temp_lock_free).start()
 
                                 if check_Cross(xyxy[0], qrcd_x_end) and 4.0 in mode_check:
                                     if check_qrcd == False and qr_lock[1] == False:
@@ -670,7 +670,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                             th1 = Thread(target=call_siren(alarm_light, alarm_siren))
                                             th1.start()
                                         qr_lock[1] = True
-                                        threading.Timer(10, qr_lock_free).start()
+                                        # threading.Timer(10, qr_lock_free).start()
                     if key:  # key=true로 설정된 이후에 보여지는 것들입니다.
                         if 5.0 in mode_check:
                             plot_one_box(tmp_mask, im0, label="mask_detect = %d" % detected_mask_count[0],

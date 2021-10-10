@@ -117,12 +117,12 @@ if __name__ == '__main__':
             running_loss += loss.item()
             print('epoch:[%d/%d] batch:[%d/%d]' %(epoch + 1,epochs, i+1,len(train_loader)))
         losses.append(running_loss/n)
+    PATH = './8192_weights.pth' # 모델 저장 경로
+    torch.save(model.state_dict(), PATH) # 모델 저장
     plt.plot(losses)
     plt.title(loss)
     plt.xlabel('epoch')
     plt.show()    
-    PATH = './8192_weights.pth' # 모델 저장 경로
-    torch.save(model.state_dict(), PATH) # 모델 저장
     print('Train Done, Save .pth')
         
     
