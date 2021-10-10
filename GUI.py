@@ -316,6 +316,7 @@ class MainWindow(QMainWindow):
             hide_labels = False
         else:
             hide_labels = True
+<<<<<<< Updated upstream
 
         if self.corona_act == "":
             msg = QMessageBox()
@@ -372,6 +373,68 @@ class MainWindow(QMainWindow):
         hanium_detect.detect(source='C:/Users/ACER/Desktop/random.mp4', w_width=int(win_size[0]),
                              w_height=int(win_size[1]), device=device, conf_thres=float(self.rel) / 100,
                              hide_labels=hide_labels, mod=int(mod_set), set_alarm=int(alarm))
+=======
+
+        if self.corona_act == "":
+            msg = QMessageBox()
+            msg.warning(self, '경고!', "검사할 코로나 소독 행위를 선택해주세요!")
+            return
+        elif self.corona_act == "모두":
+            mod_set = 0
+        elif self.corona_act == "온도계 QR 체크 ":
+            mod_set = 1
+        elif self.corona_act == '손 소독 QR 체크 ':
+            mod_set = 2
+        elif self.corona_act == '손 소독 온도계 ':
+            mod_set = 3
+        elif self.corona_act == '손 소독 ':
+            mod_set = 4
+        elif self.corona_act == "온도계 ":
+            mod_set = 5
+        else:
+            mod_set = 6
+
+        if self.alarm == "":
+            msg = QMessageBox()
+            reply = msg.warning(self, '경고!', "어떤 경보도 선택되지 않았습니다!\n 그래도 진행하시겠습니까?",
+                                QMessageBox.Yes | QMessageBox.No)
+            if reply == QMessageBox.No:
+                return
+            else:
+                alarm = 7
+        elif self.alarm == "모두":
+            alarm = 0
+        elif self.alarm == "경광등 메세지 ":
+            alarm = 1
+        elif self.alarm == "사이렌 메세지 ":
+            alarm = 2
+        elif self.alarm == "사이렌 경광등 ":
+            alarm = 3
+        elif self.alarm == "사이렌 ":
+            alarm = 4
+        elif self.alarm == "경광등 ":
+            alarm = 5
+        else:
+            alarm = 6
+
+        win_size = self.display.split('x')
+
+        # lcd + log 업데이트
+        start_timer = QTimer()
+        start_timer.setInterval(990)
+        start_timer.timeout.connect(self.lcd_update)
+        start_timer.timeout.connect(self.log_update)
+        start_timer.start()
+
+        # 코로나 CCTV 실행
+        hanium_detect.detect(source='C:/Users/ACER/Desktop/random.mp4', w_width=int(win_size[0]),
+                             w_height=int(win_size[1]), device=device, conf_thres=float(self.rel) / 100,
+<<<<<<< HEAD
+                             hide_labels=hide_labels, mod=int(mod_set), set_alarm=int(alarm), weights='weights/custom-v6.pt')
+=======
+                             hide_labels=hide_labels, mod=int(mod_set), set_alarm=int(alarm))
+>>>>>>> 143ab949ed67bd9cc313c6ea776464f042d1e4f8
+>>>>>>> Stashed changes
 
     # lcd 설정
     def lcd_update(self):

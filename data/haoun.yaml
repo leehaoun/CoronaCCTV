@@ -1,6 +1,6 @@
-train: ../haoun/images/train/  
-val: ../haoun/images/val/  
-test: ../haoun/images/test/ 
+train: ./haoun/images/train/  
+val: ./haoun/images/val/  
+test: ./haoun/images/test/ 
 # number of classes
 nc: 5
 

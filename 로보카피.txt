@@ -1,1 +1,1 @@
-robocopy "C:\Users\holee\Desktop\mark\x64\Release\data\img" "C:\Users\holee\Desktop\label" /S /XF "*.jpg"
+robocopy "C:\Users\gkdns\Desktop\yolo-mark\x64\Release\data\img" "C:\Users\gkdns\Desktop\label" /S /XF "*.jpg"
