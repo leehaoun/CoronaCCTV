@@ -102,7 +102,7 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
     losses = []
-    epochs = 50
+    epochs = 100
     n = len(train_loader)
     model.train().to(device)  
     for epoch in range(epochs):

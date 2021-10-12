@@ -80,7 +80,7 @@ def qr_pos_check(xyxy, qr_pos):
 
 
 def check_Cross(x, comp):
-    if comp + 10 > x > comp - 10:
+    if comp + 30 > x > comp - 30:
         return True
     else:
         return False
@@ -113,7 +113,7 @@ juso_db = pymysql.connect(
 
 
 @torch.no_grad()
-def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
+def detect(weights='./8192_weights',  # model.pt path(s)
            source='data/images',  # file/dir/URL/glob, 0 for webcam
            w_width=1280,
            w_height=720,
@@ -357,6 +357,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                             init_check = [0, 0, 0]
                             checking = 0
                         else:
+                            init_check = [0, 0, 0]
                             checking = checking + 1
                             cv2.putText(im0, "%d" % (10 - checking / 20), (700, 700), cv2.FONT_ITALIC, 30,
                                         (0, 140, 255), 50)
@@ -364,6 +365,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                         if init_check != [0, 1, 1]:
                             init_check = [0, 0, 0]
                         else:
+                            init_check = [0, 0, 0]
                             checking = checking + 1
                             cv2.putText(im0, "%d" % (10 - checking / 20), (500, 500), cv2.FONT_ITALIC, 30,
                                         (255, 140, 0), 5)
@@ -372,6 +374,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                             init_check = [0, 0, 0]
                             checking = 0
                         else:
+                            init_check = [0, 0, 0]
                             checking = checking + 1
                             cv2.putText(im0, "%d" % (10 - checking / 20), (500, 500), cv2.FONT_ITALIC, 30,
                                         (255, 140, 0), 5)
@@ -380,44 +383,48 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                             init_check = [0, 0, 0]
                             checking = 0
                         else:
+                            init_check = [0, 0, 0]
                             checking = checking + 1
                             cv2.putText(im0, "%d" % (10 - checking / 20), (
-                            int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH) / 2),
-                            int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT) / 2)), cv2.FONT_ITALIC, 30, (255, 255, 255), 5)
+                            int(im0.shape[1]/ 2),
+                            int(im0.shape[0] / 2)), cv2.FONT_ITALIC, 30, (255, 255, 255), 5)
                     elif mod == 4:
                         if init_check != [1, 0, 0]:
                             init_check = [0, 0, 0]
                             checking = 0
                         else:
+                            init_check = [0, 0, 0]
                             checking = checking + 1
                             cv2.putText(im0, "%d" % (10 - checking / 20), (
-                            int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH) / 2),
-                            int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT) / 2)), cv2.FONT_ITALIC, 30, (255, 255, 255), 5)
+                            int(im0.shape[1]/ 2),
+                            int(im0.shape[0] / 2)), cv2.FONT_ITALIC, 30, (255, 255, 255), 5)
                     elif mod == 5:
                         if init_check != [0, 1, 0]:
                             init_check = [0, 0, 0]
                             checking = 0
                         else:
+                            init_check = [0, 0, 0]
                             checking = checking + 1
                             cv2.putText(im0, "%d" % (10 - checking / 20), (
-                            int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH) / 2),
-                            int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT) / 2)), cv2.FONT_ITALIC, 30, (255, 255, 255), 5)
+                            int(im0.shape[1]/ 2),
+                            int(im0.shape[0] / 2)), cv2.FONT_ITALIC, 30, (255, 255, 255), 5)
                     elif mod == 6:
                         if init_check != [0, 0, 1]:
                             init_check = [0, 0, 0]
                             checking = 0
                         else:
+                            init_check = [0, 0, 0]
                             checking = checking + 1
                             cv2.putText(im0, "%d" % (10 - checking / 20), (
-                            int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH) / 2),
-                            int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT) / 2)), cv2.FONT_ITALIC, 30, (255, 255, 255), 5)
+                            int(im0.shape[1]/ 2),
+                            int(im0.shape[0] / 2)), cv2.FONT_ITALIC, 30, (255, 255, 255), 5)
                 if (checking / 20) == 10:
                     key = True
                 for *xyxy, conf, cls in reversed(
                         det):  # reversed(det) = 1box, cls 0.0 = head , 1.0 = hands, 2.0 = sanitizer, 3.0 = temperature, 4.0 = qrcd
                     if cls.item() in mode_check:
                         if cls.item() == 2.0 and sani_pos_check(xyxy, sani_pos):
-                            init_check[0] = 1
+                            init_check[0] = 1                    
                         if cls.item() == 3.0 and temp_pos_check(xyxy, temp_pos):
                             init_check[1] = 1
                         if cls.item() == 4.0 and qr_pos_check(xyxy, qr_pos):
@@ -446,7 +453,7 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                             if cls.item() == 4.0:
                                 qrcd_x_start = int(xyxy[0] + 150)
                                 qrcd_x_end = int(xyxy[0] - 150)
-                            start_x = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH)) - 100
+                            start_x = int(im0.shape[1]- 100) 
 
                             cv2.line(im0, (start_x, 0), (start_x, 1000), (255, 255, 255), 1)
                             cv2.line(im0, (sani_x_end, 0), (sani_x_end, 1000), (0, 0, 255), 1)  # red   
@@ -471,42 +478,43 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                         x2 = xyxy[2]
                                         y1 = xyxy[1]
                                         y2 = xyxy[3]
-                                        img_trim = im0s[int(y1):int(y2), int(x1):int(x2)]
+                                        img_trim = im0s[0][int(y1):int(y2), int(x1):int(x2)]
                                         cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
-                                        if deepcall() == 7:
-                                            plot_one_box(tmp, im0, label="check = not mask",
-                                                         color=colors(int(cls), True),
+                                        #if deepcall() == 6:
+                                        #    plot_one_box(tmp, im0, label="check = mask", color=colors(int(cls), True),
+                                        #                 line_thickness=line_thickness)
+                                        #else:
+                                        plot_one_box(tmp, im0, label="check = not mask",
+                                                        color=colors(int(cls), True),
                                                          line_thickness=line_thickness)
-                                            deepcall_check[3] = deepcall_check[3] + 1
-                                            if deepcall_check[3] == 5:
-                                                detected_mask_count[0] = detected_mask_count[0] + 1
-                                                plot_one_box(siren, im0, label="Not Mask!!!",
-                                                             color=colors(int(200), True),
-                                                             line_thickness=line_thickness)
-                                                file_name = "mask" + str(detected_mask_count[0])
-                                                repath = "./detected_image/mask/" + file_name + ".jpg"
-                                                cv2.imwrite(repath, im0)
-                                                ab_path = Path(repath).absolute()
-                                                now = datetime.datetime.now()
-                                                now = now.strftime('%Y-%m-%d %H:%M:%S')
-                                                log_data.append(
-                                                    {
-                                                        "time": now,
-                                                        "act": "마스크 미착용",
-                                                    }
-                                                )
-                                                cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'마스크',%s,%s)""", (now, ab_path, file_name))
-                                                if alarm_msg:
-                                                    send_message(now, "7호관 뒷문 검역소", "마스크")
-                                                cursor.fetchall()
-                                                juso_db.commit()
-                                                if alarm_light or alarm_siren:
-                                                    th1 = Thread(target=call_siren(alarm_light, alarm_siren))
-                                                    th1.start()
-                                                deepcall_check[3] = 0
-                                        else:
-                                            plot_one_box(tmp, im0, label="check = mask", color=colors(int(cls), True),
+                                        deepcall_check[3] = deepcall_check[3] + 1
+                                        if deepcall_check[3] == 5:
+                                            detected_mask_count[0] = detected_mask_count[0] + 1
+                                            plot_one_box(siren, im0, label="Not Mask!!!",
+                                                         color=colors(int(200), True),
                                                          line_thickness=line_thickness)
+                                            file_name = "mask" + str(detected_mask_count[0])
+                                            repath = "./detected_image/mask/" + file_name + ".jpg"
+                                            cv2.imwrite(repath, im0)
+                                            ab_path = Path(repath).absolute()
+                                            now = datetime.datetime.now()
+                                            now = now.strftime('%Y-%m-%d %H:%M:%S')
+                                            log_data.append(
+                                                {
+                                                    "time": now,
+                                                    "act": "마스크 미착용",
+                                                }
+                                            )
+                                            cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'마스크',%s,%s)""", (now, ab_path, file_name))
+                                                #if alarm_msg:
+                                                  #  send_message(now, "7호관 뒷문 검역소", "마스크")
+                                            cursor.fetchall()
+                                            juso_db.commit()
+                                            if alarm_light or alarm_siren:
+                                                th1 = Thread(target=call_siren)
+                                                th1.start()                                                   
+                                            deepcall_check[3] = 0
+                                        
 
                                 for *xyxytmp, clstmp in reversed(det):
                                     if clstmp.item() in mode_check:
@@ -518,7 +526,11 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                 y1 = xyxytmp[1]
                                                 y2 = xyxytmp[3]
                                                 ry = (y2 - y1) / 8
-                                                img_trim = im0s[int(y1 - ry):int(y2), int(x1):int(x2)]
+                                                y1 = int(y1 - ry)
+                                                y2 = int(y2)
+                                                x1 = int(x1)
+                                                x2 = int(x2)
+                                                img_trim = im0s[0][y1:y2, x1:x2]
                                                 cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
                                                 if len(os.listdir("./tmp/img/1")) != 0:
                                                     if deepcall() == 0:
@@ -535,7 +547,11 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                 y1 = xyxytmp[1]
                                                 y2 = xyxytmp[3]
                                                 rx = (x2 - x1) / 2
-                                                img_trim = im0s[int(y1):int(y2), int(x1 - rx):int(x2 + rx)]
+                                                y1 = int(y1)
+                                                y2 = int(y2)
+                                                x1 = int(x1 - rx)
+                                                x2 = int(x2 + rx)
+                                                img_trim = im0s[0][y1:y2, x1:x2]
                                                 cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
                                                 if len(os.listdir("./tmp/img/1")) != 0:
                                                     if deepcall() == 2:
@@ -552,7 +568,11 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                                 y1 = xyxytmp[1]
                                                 y2 = xyxytmp[3]
                                                 rx = (x2 - x1) / 2
-                                                img_trim = im0s[int(y1):int(y2), int(x1 - rx):int(x2 + rx)]
+                                                y1 = int(y1)
+                                                y2 = int(y2)
+                                                x1 = int(x1 - rx)
+                                                x2 = int(x2 + rx)
+                                                img_trim = im0s[0][y1:y2, x1:x2]
                                                 cv2.imwrite("./tmp/img/1/out.jpg", img_trim)
                                                 if len(os.listdir("./tmp/img/1")) != 0:
                                                     if deepcall() == 4:
@@ -605,12 +625,12 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                             }
                                         )
                                         cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'손소독',%s,%s)""", (now, ab_path, file_name))
-                                        if alarm_msg:
-                                            send_message(now, "7호관 뒷문 검역소", "손소독제")
+                                        #if alarm_msg:
+                                         #   send_message(now, "7호관 뒷문 검역소", "손소독제")
                                         cursor.fetchall()
                                         juso_db.commit()
                                         if alarm_light or alarm_siren:
-                                            th1 = Thread(target=call_siren(alarm_light, alarm_siren))
+                                            th1 = Thread(target=call_siren)
                                             th1.start()
                                         sani_lock[1] = True
                                         # threading.Timer(10, sani_lock_free).start()
@@ -633,13 +653,12 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                             }
                                         )
                                         cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'온도계',%s,%s)""", (now, ab_path, file_name))
-                                        if alarm_msg:
-                                            send_message(now, "7호관 뒷문 검역소", "체온검사")
-                                            print("test")
+                                        #if alarm_msg:
+                                            #send_message(now, "7호관 뒷문 검역소", "체온검사")
                                         cursor.fetchall()
                                         juso_db.commit()
                                         if alarm_light or alarm_siren:
-                                            th1 = Thread(target=call_siren(alarm_light, alarm_siren))
+                                            th1 = Thread(target=call_siren)
                                             th1.start()
                                         temp_lock[1] = True
                                         # threading.Timer(10, temp_lock_free).start()
@@ -662,12 +681,12 @@ def detect(weights='weights/custom-v5.pt',  # model.pt path(s)
                                             }
                                         )
                                         cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'QR',%s,%s)""", (now, ab_path, file_name))
-                                        if alarm_msg:
-                                            send_message(now, "7호관 뒷문 검역소", "마스크")
+                                      #  if alarm_msg:
+                                          #  send_message(now, "7호관 뒷문 검역소", "qr")
                                         cursor.fetchall()
                                         juso_db.commit()
                                         if alarm_light or alarm_siren:
-                                            th1 = Thread(target=call_siren(alarm_light, alarm_siren))
+                                            th1 = Thread(target=call_siren)
                                             th1.start()
                                         qr_lock[1] = True
                                         # threading.Timer(10, qr_lock_free).start()

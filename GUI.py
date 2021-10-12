@@ -369,7 +369,7 @@ class MainWindow(QMainWindow):
         start_timer.start()
 
         # 코로나 CCTV 실행
-        hanium_detect.detect(source='C:/Users/ACER/Desktop/random.mp4', w_width=1920,
+        hanium_detect.detect(source='1', w_width=1920,
                              w_height=1080, device=device, conf_thres=float(self.rel) / 100,
                              hide_labels=hide_labels, mod=int(mod_set), set_alarm=int(alarm), weights='weights/custom-v6.pt')
 
@@ -401,7 +401,7 @@ class MainWindow(QMainWindow):
         self.ui.table_db.setRowCount(0)
         corona_db = pymysql.connect(
             user='root',
-            passwd='coldplay96!',
+            passwd='root',
             host='localhost',
             db='corona',
             charset='utf8mb4'
