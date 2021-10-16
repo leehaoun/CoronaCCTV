@@ -6,6 +6,8 @@ import os
 import time
 from pathlib import Path
 from threading import Thread, Timer
+
+from numpy import True_
 from siren import call_siren
 import cv2
 import torch
@@ -445,14 +447,14 @@ def detect(weights='./8192_weights',  # model.pt path(s)
                             plot_one_box(center, im0, label="ON DETECTING", color=colors(int(0), True),
                                          line_thickness=line_thickness)
                             if cls.item() == 2.0:
-                                sani_x_start = int(xyxy[0] + 150)
-                                sani_x_end = int(xyxy[0] - 150)
+                                sani_x_start = int(xyxy[0] + 100)
+                                sani_x_end = int(xyxy[0] - 100)
                             if cls.item() == 3.0:
-                                temp_x_start = int(xyxy[0] + 150)
-                                temp_x_end = int(xyxy[0] - 150)
+                                temp_x_start = int(xyxy[0] + 100)
+                                temp_x_end = int(xyxy[0] - 100)
                             if cls.item() == 4.0:
-                                qrcd_x_start = int(xyxy[0] + 150)
-                                qrcd_x_end = int(xyxy[0] - 150)
+                                qrcd_x_start = int(xyxy[0] + 100)
+                                qrcd_x_end = int(xyxy[0] - 100)
                             start_x = int(im0.shape[1]- 100) 
 
                             cv2.line(im0, (start_x, 0), (start_x, 1000), (255, 255, 255), 1)
@@ -506,8 +508,8 @@ def detect(weights='./8192_weights',  # model.pt path(s)
                                                 }
                                             )
                                             cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'마스크',%s,%s)""", (now, ab_path, file_name))
-                                                #if alarm_msg:
-                                                  #  send_message(now, "7호관 뒷문 검역소", "마스크")
+                                            if alarm_msg:
+                                                send_message(now, "7호관 뒷문 검역소", "마스크")
                                             cursor.fetchall()
                                             juso_db.commit()
                                             if alarm_light or alarm_siren:
@@ -599,15 +601,13 @@ def detect(weights='./8192_weights',  # model.pt path(s)
                                     # threading.Timer(10, qr_lock_free).start()
 
                                 if check_Cross(xyxy[2], sani_x_end) and 2.0 in mode_check:
-                                    sani_lock[0] = False
                                     sani_lock[1] = False
                                 if check_Cross(xyxy[2], temp_x_end) and 3.0 in mode_check:
-                                    temp_lock[0] = False
                                     temp_lock[1] = False
                                 if check_Cross(xyxy[2], qrcd_x_end) and 4.0 in mode_check:
-                                    qr_lock[0] = False
                                     qr_lock[1] = False
                                 if check_Cross(xyxy[0], sani_x_end) and 2.0 in mode_check:
+                                    sani_lock[0] = False
                                     if check_sani == False and sani_lock[1] == False:
                                         plot_one_box(siren, im0, label="Not Sani!!!", color=colors(int(200), True),
                                                      line_thickness=line_thickness)
@@ -625,8 +625,8 @@ def detect(weights='./8192_weights',  # model.pt path(s)
                                             }
                                         )
                                         cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'손소독',%s,%s)""", (now, ab_path, file_name))
-                                        #if alarm_msg:
-                                         #   send_message(now, "7호관 뒷문 검역소", "손소독제")
+                                        if alarm_msg:
+                                           send_message(now, "7호관 뒷문 검역소", "손소독제")
                                         cursor.fetchall()
                                         juso_db.commit()
                                         if alarm_light or alarm_siren:
@@ -636,6 +636,7 @@ def detect(weights='./8192_weights',  # model.pt path(s)
                                         # threading.Timer(10, sani_lock_free).start()
 
                                 if check_Cross(xyxy[0], temp_x_end) and 3.0 in mode_check:
+                                    temp_lock[0] = False
                                     if check_temp == False and temp_lock[1] == False:
                                         plot_one_box(siren, im0, label="Not temp!!!", color=colors(int(200), True),
                                                      line_thickness=line_thickness)
@@ -653,8 +654,8 @@ def detect(weights='./8192_weights',  # model.pt path(s)
                                             }
                                         )
                                         cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'온도계',%s,%s)""", (now, ab_path, file_name))
-                                        #if alarm_msg:
-                                            #send_message(now, "7호관 뒷문 검역소", "체온검사")
+                                        if alarm_msg:
+                                            send_message(now, "7호관 뒷문 검역소", "체온검사")
                                         cursor.fetchall()
                                         juso_db.commit()
                                         if alarm_light or alarm_siren:
@@ -664,6 +665,7 @@ def detect(weights='./8192_weights',  # model.pt path(s)
                                         # threading.Timer(10, temp_lock_free).start()
 
                                 if check_Cross(xyxy[0], qrcd_x_end) and 4.0 in mode_check:
+                                    qr_lock[0] = False
                                     if check_qrcd == False and qr_lock[1] == False:
                                         plot_one_box(siren, im0, label="Not qrcd!!!", color=colors(int(200), True),
                                                      line_thickness=line_thickness)
@@ -681,8 +683,8 @@ def detect(weights='./8192_weights',  # model.pt path(s)
                                             }
                                         )
                                         cursor.execute("""INSERT INTO log (time, check_act, ab_path, file_name) VALUES (%s,'QR',%s,%s)""", (now, ab_path, file_name))
-                                      #  if alarm_msg:
-                                          #  send_message(now, "7호관 뒷문 검역소", "qr")
+                                        if alarm_msg:
+                                           send_message(now, "7호관 뒷문 검역소", "qr")
                                         cursor.fetchall()
                                         juso_db.commit()
                                         if alarm_light or alarm_siren:

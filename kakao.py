@@ -1,6 +1,8 @@
 import json
 import requests
 
+from siren import call_siren
+
 def refreshToken(refresh_token) -> str:
     REST_API_KEY = "b34e330bcd9d65a5cfd4c5abb2052f16"
     REDIRECT_URI = "https://kauth.kakao.com/oauth/token"
@@ -20,7 +22,7 @@ def send_message(now, stage, object):
     url = "https://kapi.kakao.com/v2/api/talk/memo/default/send"
     # 사용자 토큰
     headers = {
-        "Authorization": "Bearer " + refreshToken("zymvATLqKcFezyX9245qKeb2kyU7znt_Ud2Hbwo9c5oAAAF8aCLTxA")
+        "Authorization": "Bearer " + refreshToken("LPQDNF9FVTye0_Os1eM5RUVU_T50F9av6V4L_QopcBQAAAF8iABWgg")
     }
     data = {
         "template_object" : json.dumps({ "object_type" : "text",
